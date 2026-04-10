@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/ui/Toast";
 
 /* ───── profile data ───── */
 interface Profile {
@@ -61,7 +62,7 @@ const fallbackProfiles: Profile[] = [
   },
 ];
 
-const nearbyProfiles = [
+const fallbackNearby = [
   { id: 10, emoji: "👦🏽", name: "Rohan", gradient: "linear-gradient(135deg,#FF5020,#FFD000)" },
   { id: 11, emoji: "👧🏻", name: "Anvi", gradient: "linear-gradient(135deg,#FF3070,#8B5CF6)" },
   { id: 12, emoji: "🧑🏽", name: "Kabir", gradient: "linear-gradient(135deg,#7B61FF,#FF7040)" },
@@ -86,7 +87,8 @@ function dbToProfile(row: Record<string, unknown>, idx: number): Profile {
 
 /* ───── component ───── */
 export default function DiscoverPage() {
-  const { user } = useAuth();
+  const { user, profile: myProfile } = useAuth();
+  const { showToast } = useToast();
 
   const [profiles, setProfiles] = useState<Profile[]>(fallbackProfiles);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -94,10 +96,15 @@ export default function DiscoverPage() {
   const [stamp, setStamp] = useState<"like" | "nope" | null>(null);
   const [matched, setMatched] = useState(false);
   const [matchName, setMatchName] = useState("");
+  const [nearbyProfiles, setNearbyProfiles] = useState(fallbackNearby);
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
 
   /* ── fetch real profiles on mount ── */
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoadingProfiles(false);
+      return;
+    }
 
     async function loadProfiles() {
       // 1) Get IDs the current user already swiped on
@@ -116,7 +123,6 @@ export default function DiscoverPage() {
         .limit(20);
 
       if (swipedIds.length > 0) {
-        // Use .not('id', 'in', ...) to exclude already-swiped profiles
         query = query.not("id", "in", `(${swipedIds.join(",")})`);
       }
 
@@ -124,21 +130,49 @@ export default function DiscoverPage() {
 
       if (error) {
         console.error("Error fetching profiles:", error);
+        setLoadingProfiles(false);
         return; // keep fallback
       }
 
       if (data && data.length > 0) {
         const mapped = data.map((row, idx) => dbToProfile(row, idx));
         setProfiles(mapped);
-        // Reset card state for fresh deck
         setCurrentIdx(0);
         setGone(new Set());
       }
-      // If no data, fallback profiles remain
+      setLoadingProfiles(false);
     }
 
     loadProfiles();
   }, [user]);
+
+  /* ── fetch nearby profiles (same city) ── */
+  useEffect(() => {
+    if (!user) return;
+    const userCity = (myProfile as Record<string, unknown>)?.city as string | undefined;
+    if (!userCity) return;
+
+    async function loadNearby() {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_emoji, city")
+        .eq("city", userCity!)
+        .neq("id", user!.id)
+        .limit(8);
+
+      if (error || !data || data.length === 0) return; // keep fallback
+
+      const mapped = data.map((row: Record<string, unknown>, idx: number) => ({
+        id: Number(row.id) || idx,
+        emoji: (row.avatar_emoji as string) || "🙂",
+        name: (row.display_name as string) || "Someone",
+        gradient: GRADIENTS[idx % GRADIENTS.length].replace("145deg", "135deg"),
+      }));
+      setNearbyProfiles(mapped);
+    }
+
+    loadNearby();
+  }, [user, myProfile]);
 
   /* ── save swipe to DB ── */
   const saveSwipe = useCallback(
@@ -263,6 +297,7 @@ export default function DiscoverPage() {
           <p className="text-muted text-[13px] mt-0.5">Find your person</p>
         </div>
         <button
+          onClick={() => showToast("Filters coming soon!")}
           className="w-10 h-10 rounded-full flex items-center justify-center"
           style={{ background: "rgba(255,243,236,0.08)" }}
         >
@@ -283,7 +318,14 @@ export default function DiscoverPage() {
 
       {/* ── swipe card stack ── */}
       <section className="px-5 relative" style={{ height: 370 }}>
-        {visibleCards.length === 0 ? (
+        {loadingProfiles ? (
+          <div className="flex flex-col items-center justify-center h-full">
+            <div
+              className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+              style={{ borderColor: "rgba(255,80,32,0.4)", borderTopColor: "transparent" }}
+            />
+          </div>
+        ) : visibleCards.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <p className="text-4xl mb-3">✨</p>
             <p className="font-heading text-lg font-semibold text-warm">
@@ -455,6 +497,7 @@ export default function DiscoverPage() {
 
         {/* voice */}
         <button
+          onClick={() => showToast("Voice intros coming soon!")}
           className="flex items-center justify-center rounded-full active:scale-90 action-btn-hover"
           style={{
             width: 46,

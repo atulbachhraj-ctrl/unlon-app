@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/components/ui/Toast";
 import { supabase } from "@/lib/supabase";
 
 const vibes = [
@@ -14,16 +16,17 @@ const vibes = [
   { label: "Gaming", emoji: "\u{1F3AE}" },
 ];
 
-const stories = [
-  { name: "Priya", emoji: "\u{1F469}\u200D\u{1F9B1}" },
-  { name: "Aryan", emoji: "\u{1F9D1}" },
-  { name: "Sofia", emoji: "\u{1F469}" },
-  { name: "Dev", emoji: "\u{1F9D1}\u200D\u{1F4BB}" },
-  { name: "Maya", emoji: "\u{1F467}" },
+const fallbackStories = [
+  { name: "Priya", emoji: "\u{1F469}\u200D\u{1F9B1}", id: "fallback-1" },
+  { name: "Aryan", emoji: "\u{1F9D1}", id: "fallback-2" },
+  { name: "Sofia", emoji: "\u{1F469}", id: "fallback-3" },
+  { name: "Dev", emoji: "\u{1F9D1}\u200D\u{1F4BB}", id: "fallback-4" },
+  { name: "Maya", emoji: "\u{1F467}", id: "fallback-5" },
 ];
 
-const feedCards = [
+const fallbackFeedCards = [
   {
+    id: "fallback-fc-1",
     name: "Priya",
     age: 23,
     location: "Mumbai",
@@ -31,8 +34,10 @@ const feedCards = [
     badgeType: "match" as const,
     emoji: "\u{1F469}\u200D\u{1F9B1}",
     text: "Looking for someone to explore cafes in Mumbai this weekend \u{1F33F}",
+    vibes: [] as string[],
   },
   {
+    id: "fallback-fc-2",
     name: "Aryan",
     age: 25,
     location: "Delhi",
@@ -40,8 +45,10 @@ const feedCards = [
     badgeType: "new" as const,
     emoji: "\u{1F9D1}",
     text: "Anyone into midnight drives and deep conversations? \u{1F303}",
+    vibes: [] as string[],
   },
   {
+    id: "fallback-fc-3",
     name: "Sofia",
     age: 22,
     location: "Bangalore",
@@ -49,8 +56,10 @@ const feedCards = [
     badgeType: "match" as const,
     emoji: "\u{1F469}",
     text: "Need a coding buddy for hackathons \u{1F4BB}",
+    vibes: [] as string[],
   },
   {
+    id: "fallback-fc-4",
     name: "Dev",
     age: 24,
     location: "Pune",
@@ -58,15 +67,32 @@ const feedCards = [
     badgeType: "match" as const,
     emoji: "\u{1F9D1}\u200D\u{1F4BB}",
     text: "Let's jam together sometime \u2014 guitar, keys, anything goes \u{1F3B8}",
+    vibes: [] as string[],
   },
 ];
 
 const fallbackChallenge = "What's one thing that made you smile today?";
 
+interface FeedCard {
+  id: string;
+  name: string;
+  age: number;
+  location: string;
+  badge: string;
+  badgeType: "match" | "new";
+  emoji: string;
+  text: string;
+  vibes: string[];
+}
+
 export default function HomePage() {
   const [activeVibe, setActiveVibe] = useState(0);
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
+  const { showToast } = useToast();
+  const router = useRouter();
   const [dailyChallenge, setDailyChallenge] = useState(fallbackChallenge);
+  const [stories, setStories] = useState(fallbackStories);
+  const [feedCards, setFeedCards] = useState<FeedCard[]>(fallbackFeedCards);
 
   const displayName = profile?.display_name || "Alex";
   const avatarEmoji = (profile as any)?.avatar_emoji || "\u{1F60A}";
@@ -74,6 +100,13 @@ export default function HomePage() {
   useEffect(() => {
     fetchDailyChallenge();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchStories();
+      fetchFeedCards();
+    }
+  }, [user]);
 
   async function fetchDailyChallenge() {
     try {
@@ -91,6 +124,148 @@ export default function HomePage() {
       // keep fallback
     }
   }
+
+  async function fetchStories() {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_emoji")
+        .eq("is_online", true)
+        .limit(10);
+
+      if (!error && data && data.length > 0) {
+        setStories(
+          data.map((p) => ({
+            id: p.id,
+            name: p.display_name || "User",
+            emoji: p.avatar_emoji || "\u{1F60A}",
+          }))
+        );
+      }
+    } catch {
+      // keep fallback
+    }
+  }
+
+  async function fetchFeedCards() {
+    if (!user) return;
+    try {
+      // Get IDs the current user already swiped on
+      const { data: matchData } = await supabase
+        .from("matches")
+        .select("user_b")
+        .eq("user_a", user.id);
+
+      const swipedIds = (matchData || []).map((m) => m.user_b);
+      const excludeIds = [user.id, ...swipedIds];
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_emoji, bio, age, city, vibes");
+
+      if (!error && data && data.length > 0) {
+        const myVibes: string[] = (profile as any)?.vibes || [];
+
+        const cards: FeedCard[] = data
+          .filter((p) => !excludeIds.includes(p.id))
+          .map((p) => {
+            const theirVibes: string[] = p.vibes || [];
+            const sharedCount = myVibes.filter((v) =>
+              theirVibes.includes(v)
+            ).length;
+            const maxCount = Math.max(myVibes.length, theirVibes.length, 1);
+            const matchPct = Math.round((sharedCount / maxCount) * 100);
+
+            return {
+              id: p.id,
+              name: p.display_name || "User",
+              age: p.age || 0,
+              location: p.city || "",
+              badge: matchPct > 0 ? `${matchPct}% match` : "New",
+              badgeType: (matchPct > 0 ? "match" : "new") as "match" | "new",
+              emoji: p.avatar_emoji || "\u{1F60A}",
+              text: p.bio || "",
+              vibes: theirVibes,
+            };
+          });
+
+        if (cards.length > 0) {
+          setFeedCards(cards);
+        }
+      }
+    } catch {
+      // keep fallback
+    }
+  }
+
+  async function handleConnect(card: FeedCard) {
+    if (!user) return;
+    try {
+      // Insert pending match
+      const { error } = await supabase.from("matches").insert({
+        user_a: user.id,
+        user_b: card.id,
+        status: "pending",
+      });
+      if (error) throw error;
+
+      // Check for mutual match
+      const { data: mutual } = await supabase
+        .from("matches")
+        .select("status")
+        .eq("user_a", card.id)
+        .eq("user_b", user.id)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (mutual) {
+        // Update both to matched
+        await supabase
+          .from("matches")
+          .update({ status: "matched" })
+          .eq("user_a", card.id)
+          .eq("user_b", user.id);
+        await supabase
+          .from("matches")
+          .update({ status: "matched" })
+          .eq("user_a", user.id)
+          .eq("user_b", card.id);
+        showToast(`It's a match with ${card.name}! 🎉`);
+      } else {
+        showToast(`Connection request sent to ${card.name}!`);
+      }
+
+      // Remove card from list
+      setFeedCards((prev) => prev.filter((c) => c.id !== card.id));
+    } catch {
+      showToast("Something went wrong. Try again.");
+    }
+  }
+
+  async function handleSkip(card: FeedCard) {
+    if (!user) return;
+    try {
+      await supabase.from("matches").insert({
+        user_a: user.id,
+        user_b: card.id,
+        status: "rejected",
+      });
+    } catch {
+      // silent fail
+    }
+    setFeedCards((prev) => prev.filter((c) => c.id !== card.id));
+  }
+
+  // Filter feed cards by active vibe
+  const filteredFeedCards = useMemo(() => {
+    if (activeVibe === 0) return feedCards; // "All Vibes"
+    const selectedVibe = vibes[activeVibe].label;
+    return feedCards.filter((card) =>
+      card.vibes.some(
+        (v) => v.toLowerCase() === selectedVibe.toLowerCase()
+      )
+    );
+  }, [feedCards, activeVibe]);
 
   // Determine greeting based on time of day
   function getGreeting() {
@@ -159,7 +334,7 @@ export default function HomePage() {
           <div className="flex gap-4 overflow-x-auto no-scrollbar">
             {stories.map((story) => (
               <div
-                key={story.name}
+                key={story.id}
                 className="flex flex-col items-center gap-1.5 flex-shrink-0"
               >
                 {/* Gradient ring */}
@@ -187,12 +362,13 @@ export default function HomePage() {
               <span className="text-sm font-semibold text-gold">
                 🎯 Daily Challenge
               </span>
-              <span className="text-xs text-peach">Day 7 streak! 🔥</span>
+              <span className="text-xs text-peach">New challenge!</span>
             </div>
             <p className="text-warm text-[15px] font-medium mb-3">
               {dailyChallenge}
             </p>
             <button
+              onClick={() => router.push("/night")}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-bg"
               style={{
                 background: "linear-gradient(135deg, #FFD000, #FFA040)",
@@ -215,9 +391,9 @@ export default function HomePage() {
 
         {/* Feed Cards */}
         <div className="mt-3 px-5 flex flex-col gap-4">
-          {feedCards.map((card) => (
+          {filteredFeedCards.map((card) => (
             <div
-              key={card.name}
+              key={card.id}
               className="rounded-2xl p-4 bg-card border border-[rgba(255,120,70,0.1)] card-glow"
             >
               {/* Card Header */}
@@ -253,10 +429,16 @@ export default function HomePage() {
 
               {/* Card Actions */}
               <div className="flex gap-3">
-                <button className="flex-1 py-2.5 rounded-xl gradient-bg text-sm font-semibold text-bg">
+                <button
+                  onClick={() => handleConnect(card)}
+                  className="flex-1 py-2.5 rounded-xl gradient-bg text-sm font-semibold text-bg"
+                >
                   Connect 🔥
                 </button>
-                <button className="flex-1 py-2.5 rounded-xl border border-[rgba(255,120,70,0.1)] text-sm font-medium text-muted">
+                <button
+                  onClick={() => handleSkip(card)}
+                  className="flex-1 py-2.5 rounded-xl border border-[rgba(255,120,70,0.1)] text-sm font-medium text-muted"
+                >
                   Skip
                 </button>
               </div>

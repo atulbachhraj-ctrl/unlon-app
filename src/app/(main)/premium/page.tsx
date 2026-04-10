@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
 
 const features = [
   { emoji: "👁", text: "See who viewed & liked your profile" },
@@ -21,6 +22,7 @@ const plans = [
 export default function PremiumPage() {
   const [selectedPlan, setSelectedPlan] = useState("yearly");
   const router = useRouter();
+  const { showToast } = useToast();
 
   return (
     <div
@@ -126,6 +128,7 @@ export default function PremiumPage() {
 
         {/* CTA buttons */}
         <button
+          onClick={() => showToast("Premium launching soon! Stay tuned \uD83D\uDC51")}
           className="mt-8 w-full py-4 rounded-2xl text-base font-bold gradient-bg active:scale-[0.97] transition-transform"
           style={{ color: "#060104" }}
         >

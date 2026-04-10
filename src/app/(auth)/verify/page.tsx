@@ -1,41 +1,28 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/components/ui/Toast';
 
 export default function VerifyPage() {
   const router = useRouter();
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const searchParams = useSearchParams();
+  const { showToast } = useToast();
   const [timer, setTimer] = useState(30);
   const [checking, setChecking] = useState(false);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  useEffect(() => {
-    inputRefs.current[0]?.focus();
-  }, []);
+  // Get email from URL searchParams or localStorage
+  const storedEmail =
+    searchParams.get('email') ||
+    (typeof window !== 'undefined' ? localStorage.getItem('unlon_signup_email') : null) ||
+    '';
 
   useEffect(() => {
     if (timer <= 0) return;
     const interval = setInterval(() => setTimer((t) => t - 1), 1000);
     return () => clearInterval(interval);
   }, [timer]);
-
-  const handleChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-    if (value && index < 3) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
 
   const handleContinue = async () => {
     setChecking(true);
@@ -58,11 +45,26 @@ export default function VerifyPage() {
     }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (timer > 0) return;
+
+    if (!storedEmail) {
+      showToast('No email found. Please sign up again.');
+      return;
+    }
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: storedEmail,
+    });
+
+    if (error) {
+      showToast(error.message);
+    } else {
+      showToast('Verification email resent!');
+    }
+
     setTimer(30);
-    setOtp(['', '', '', '']);
-    inputRefs.current[0]?.focus();
   };
 
   const formatTime = (s: number) => `0:${s.toString().padStart(2, '0')}`;
@@ -110,42 +112,6 @@ export default function VerifyPage() {
           We sent a verification link to your email.{' '}
           <span style={{ color: 'rgba(255,243,236,0.7)' }}>Click it to confirm your account.</span>
         </p>
-
-        {/* OTP inputs (visual design, can be functional later) */}
-        <div className="flex gap-3 mb-8">
-          {otp.map((digit, i) => (
-            <input
-              key={i}
-              ref={(el) => { inputRefs.current[i] = el; }}
-              type="text"
-              inputMode="numeric"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleChange(i, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(i, e)}
-              className="w-[64px] h-[64px] rounded-[16px] text-center text-2xl font-bold text-warm outline-none transition-all"
-              style={{
-                fontFamily: 'var(--font-heading)',
-                background: digit
-                  ? 'rgba(255,80,32,0.08)'
-                  : 'rgba(255,243,236,0.05)',
-                border: digit
-                  ? '1.5px solid rgba(255,120,70,0.4)'
-                  : '1.5px solid rgba(255,120,70,0.1)',
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = 'rgba(255,120,70,0.5)';
-                e.target.style.background = 'rgba(255,80,32,0.08)';
-              }}
-              onBlur={(e) => {
-                if (!digit) {
-                  e.target.style.borderColor = 'rgba(255,120,70,0.1)';
-                  e.target.style.background = 'rgba(255,243,236,0.05)';
-                }
-              }}
-            />
-          ))}
-        </div>
 
         {/* Continue to App button */}
         <button

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/components/ui/Toast";
 
 // Seed/fallback confessions shown when DB is empty
 const seedConfessions = [
@@ -86,6 +87,8 @@ export default function ConfessPage() {
   const [isPosting, setIsPosting] = useState(false);
   const [loadingFeed, setLoadingFeed] = useState(true);
 
+  const { showToast } = useToast();
+
   let user: { id: string } | null = null;
   try {
     const auth = useAuth();
@@ -167,7 +170,7 @@ export default function ConfessPage() {
     });
 
     if (error) {
-      console.error("Error posting confession:", error);
+      showToast("Could not post. Try again.");
     } else {
       setConfessionText("");
     }
@@ -261,10 +264,17 @@ export default function ConfessPage() {
               onChange={(e) => setConfessionText(e.target.value)}
               placeholder="I've been wanting to tell someone..."
               rows={4}
+              maxLength={500}
               className="w-full bg-transparent text-warm text-[15px] leading-relaxed placeholder:text-[rgba(255,243,236,0.2)] outline-none resize-none"
               style={{ fontFamily: "var(--font-body)" }}
               disabled={isPosting}
             />
+            <p
+              className="text-right text-[11px] mt-1"
+              style={{ color: "rgba(255,243,236,0.25)" }}
+            >
+              {confessionText.length}/500
+            </p>
 
             {/* Footer */}
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-[rgba(255,48,112,0.1)]">

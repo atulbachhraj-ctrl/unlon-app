@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/ui/Toast";
 
 const defaultVibes = [
   { emoji: "\u{1F3B5}", label: "Music" },
@@ -39,7 +40,8 @@ const settingsGroups = [
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
+  const { showToast } = useToast();
 
   const [editMode, setEditMode] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState("");
@@ -80,7 +82,8 @@ export default function ProfilePage() {
       const { count: matchCount } = await supabase
         .from("matches")
         .select("*", { count: "exact", head: true })
-        .or(`user_id.eq.${user.id},matched_user_id.eq.${user.id}`);
+        .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+        .eq("status", "matched");
       setConnectionsCount(matchCount || 0);
     } catch {
       // keep 0
@@ -121,10 +124,10 @@ export default function ProfilePage() {
 
       if (error) throw error;
       setEditMode(false);
-      // Reload page to pick up new profile in auth context
-      window.location.reload();
+      await refreshProfile();
+      showToast("Profile updated!");
     } catch (err: any) {
-      alert("Could not save: " + (err.message || "Unknown error"));
+      showToast("Could not save: " + (err.message || "Unknown error"));
     } finally {
       setSaving(false);
     }

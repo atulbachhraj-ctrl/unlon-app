@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/ui/Toast";
 
 interface ChatItem {
   id: string;
@@ -88,6 +90,8 @@ const gradients = [
 
 export default function ChatsPage() {
   const { user } = useAuth();
+  const router = useRouter();
+  const { showToast } = useToast();
   const [search, setSearch] = useState("");
   const [chats, setChats] = useState<ChatItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +123,7 @@ export default function ChatsPage() {
         // Fetch profiles for all other users
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("id, display_name, avatar_emoji")
+          .select("id, display_name, avatar_emoji, is_online")
           .in("id", otherUserIds);
 
         const profileMap = new Map(
@@ -131,7 +135,7 @@ export default function ChatsPage() {
           matches.map(async (match, index) => {
             const otherId =
               match.user_a === user!.id ? match.user_b : match.user_a;
-            const profile = profileMap.get(otherId);
+            const profileData = profileMap.get(otherId);
 
             // Get latest message
             const { data: latestMessages } = await supabase
@@ -165,14 +169,14 @@ export default function ChatsPage() {
 
             return {
               id: match.id,
-              name: profile?.display_name || "Someone",
-              emoji: profile?.avatar_emoji || "\uD83D\uDE0A",
+              name: profileData?.display_name || "Someone",
+              emoji: profileData?.avatar_emoji || "\uD83D\uDE0A",
               lastMessage,
               time: latestMsg
                 ? formatTime(latestMsg.created_at)
                 : formatTime(match.matched_at),
               unread: unreadCount || 0,
-              online: false,
+              online: !!profileData?.is_online,
               gradient: `bg-gradient-to-br ${gradients[index % gradients.length]}`,
             };
           })
@@ -189,6 +193,68 @@ export default function ChatsPage() {
     }
 
     fetchChats();
+  }, [user]);
+
+  // Realtime subscription for new messages
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("chats-page-messages")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const newMsg = payload.new as {
+            id: string;
+            match_id: string;
+            sender_id: string;
+            content: string;
+            message_type: string;
+            created_at: string;
+          };
+
+          setChats((prev) => {
+            const chatIndex = prev.findIndex((c) => c.id === newMsg.match_id);
+            if (chatIndex === -1) return prev;
+
+            const updated = [...prev];
+            const chat = { ...updated[chatIndex] };
+
+            // Update last message
+            if (newMsg.message_type === "voice") {
+              chat.lastMessage = "\uD83C\uDFA4 Voice message";
+            } else if (newMsg.message_type === "image") {
+              chat.lastMessage = "\uD83D\uDCF7 Photo";
+            } else {
+              chat.lastMessage = newMsg.content;
+            }
+            chat.time = formatTime(newMsg.created_at);
+
+            // Increment unread if sender is not current user
+            if (newMsg.sender_id !== user.id) {
+              chat.unread = chat.unread + 1;
+            }
+
+            updated[chatIndex] = chat;
+
+            // Re-sort: move this chat to the top
+            const [movedChat] = updated.splice(chatIndex, 1);
+            updated.unshift(movedChat);
+
+            return updated;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const filteredChats = chats.filter(
@@ -208,6 +274,10 @@ export default function ChatsPage() {
           Messages
         </h1>
         <button
+          onClick={() => {
+            router.push("/discover");
+            showToast("Find someone new to chat with!");
+          }}
           className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
           style={{ background: "rgba(255,112,64,0.12)" }}
         >

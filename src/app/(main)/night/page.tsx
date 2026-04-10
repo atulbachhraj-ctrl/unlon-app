@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/ui/Toast";
 
 interface NightOwl {
   id: string;
+  userId: string;
   emoji: string;
   name: string;
   status: string;
@@ -13,11 +15,11 @@ interface NightOwl {
 }
 
 const fallbackNightOwls: NightOwl[] = [
-  { id: "f1", emoji: "\u{1F614}", name: "Anonymous", status: "Can\u2019t sleep", city: "Mumbai" },
-  { id: "f2", emoji: "\u{1F3B5}", name: "Music Soul", status: "Listening to sad songs", city: "Delhi" },
-  { id: "f3", emoji: "\u{1F4D6}", name: "Night Reader", status: "Reading at 2am", city: "Bangalore" },
-  { id: "f4", emoji: "\u{1F319}", name: "Star Gazer", status: "On the terrace", city: "Pune" },
-  { id: "f5", emoji: "\u{1F3A8}", name: "Night Artist", status: "Drawing at midnight", city: "Chennai" },
+  { id: "f1", userId: "", emoji: "\u{1F614}", name: "Anonymous", status: "Can\u2019t sleep", city: "Mumbai" },
+  { id: "f2", userId: "", emoji: "\u{1F3B5}", name: "Music Soul", status: "Listening to sad songs", city: "Delhi" },
+  { id: "f3", userId: "", emoji: "\u{1F4D6}", name: "Night Reader", status: "Reading at 2am", city: "Bangalore" },
+  { id: "f4", userId: "", emoji: "\u{1F319}", name: "Star Gazer", status: "On the terrace", city: "Pune" },
+  { id: "f5", userId: "", emoji: "\u{1F3A8}", name: "Night Artist", status: "Drawing at midnight", city: "Chennai" },
 ];
 
 const fallbackQuestion =
@@ -33,9 +35,10 @@ const moodOptions = [
 
 export default function NightPage() {
   const { user, profile } = useAuth();
+  const { showToast } = useToast();
   const [nightOwls, setNightOwls] = useState<NightOwl[]>(fallbackNightOwls);
   const [question, setQuestion] = useState(fallbackQuestion);
-  const [owlCount, setOwlCount] = useState(847);
+  const [owlCount, setOwlCount] = useState(0);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -73,13 +76,14 @@ export default function NightPage() {
       if (!error && data && data.length > 0) {
         const mapped: NightOwl[] = data.map((s: any) => ({
           id: s.id,
+          userId: s.user_id || "",
           emoji: s.mood_emoji || "\u{1F319}",
           name: s.profiles?.display_name || "Anonymous",
           status: s.status_text || "Awake late...",
           city: s.profiles?.city || "Somewhere",
         }));
         setNightOwls(mapped);
-        setOwlCount(data.length);
+        setOwlCount(mapped.length);
       }
     } catch {
       // keep fallback
@@ -88,7 +92,7 @@ export default function NightPage() {
 
   async function handleShareAnswer(moodEmoji: string) {
     if (!user) {
-      alert("Sign in to share your answer");
+      showToast("Sign in to share your answer");
       return;
     }
     setSubmitting(true);
@@ -111,18 +115,79 @@ export default function NightPage() {
       if (error) throw error;
 
       setShowMoodPicker(false);
-      // Refresh the list
       await fetchNightOwls();
-    } catch (err: any) {
-      alert("Could not share: " + (err.message || "Unknown error"));
+    } catch {
+      showToast("Could not share. Try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  function handleTalk(owl: NightOwl) {
-    alert("Connecting... Chat feature coming soon!");
+  async function handleTalk(owl: NightOwl) {
+    if (!user) {
+      showToast("Sign in to connect");
+      return;
+    }
+    if (!owl.userId) return;
+
+    const { error } = await supabase.from("matches").insert({
+      user_a: user.id,
+      user_b: owl.userId,
+      status: "pending",
+    });
+
+    if (error) {
+      showToast("Could not send request. Try again.");
+    } else {
+      showToast("Connection request sent! \u{1F319}");
+    }
   }
+
+  /* ── realtime subscription for night_sessions ── */
+  useEffect(() => {
+    const channel = supabase
+      .channel("night-sessions-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "night_sessions" },
+        (payload) => {
+          const s = payload.new as any;
+          if (!s.is_active) return;
+          const newOwl: NightOwl = {
+            id: s.id,
+            userId: s.user_id || "",
+            emoji: s.mood_emoji || "\u{1F319}",
+            name: "Anonymous",
+            status: s.status_text || "Awake late...",
+            city: "Somewhere",
+          };
+          setNightOwls((prev) => {
+            if (prev.some((o) => o.id === newOwl.id)) return prev;
+            return [newOwl, ...prev];
+          });
+          setOwlCount((c) => c + 1);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "night_sessions" },
+        (payload) => {
+          const s = payload.new as any;
+          if (!s.is_active) {
+            setNightOwls((prev) => {
+              const filtered = prev.filter((o) => o.id !== s.id);
+              setOwlCount(filtered.length);
+              return filtered;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <div

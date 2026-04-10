@@ -4,9 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/components/ui/Toast';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,6 +21,13 @@ export default function LoginPage() {
 
     if (!email || !password) {
       setError('Email and password are required.');
+      setIsLoading(false);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
       setIsLoading(false);
       return;
     }
@@ -144,6 +153,23 @@ export default function LoginPage() {
           {/* Forgot password */}
           <div className="flex justify-end">
             <button
+              onClick={async () => {
+                if (!email) {
+                  setError('Enter your email first, then tap Forgot password.');
+                  return;
+                }
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                  setError('Please enter a valid email address.');
+                  return;
+                }
+                const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+                if (resetError) {
+                  setError(resetError.message);
+                } else {
+                  showToast('Reset link sent! Check your email.');
+                }
+              }}
               className="text-xs font-medium"
               style={{ color: '#FF7040', fontFamily: 'var(--font-body)' }}
             >
@@ -180,6 +206,7 @@ export default function LoginPage() {
         {/* Social buttons */}
         <div className="flex gap-3">
           <button
+            onClick={() => showToast('Social login coming soon!')}
             className="flex-1 h-[50px] rounded-[14px] flex items-center justify-center gap-2.5 text-sm font-medium text-warm transition-colors active:scale-[0.97]"
             style={{
               fontFamily: 'var(--font-body)',
@@ -191,6 +218,7 @@ export default function LoginPage() {
             Google
           </button>
           <button
+            onClick={() => showToast('Social login coming soon!')}
             className="flex-1 h-[50px] rounded-[14px] flex items-center justify-center gap-2.5 text-sm font-medium text-warm transition-colors active:scale-[0.97]"
             style={{
               fontFamily: 'var(--font-body)',

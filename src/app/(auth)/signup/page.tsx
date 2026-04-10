@@ -4,9 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/components/ui/Toast';
 
 export default function SignupPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -28,6 +30,13 @@ export default function SignupPage() {
 
     if (!email || !password) {
       setError('Email and password are required.');
+      setIsLoading(false);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
       setIsLoading(false);
       return;
     }
@@ -59,6 +68,8 @@ export default function SignupPage() {
       return;
     }
 
+    // Save email for verify page resend functionality
+    localStorage.setItem('unlon_signup_email', email);
     router.push('/verify');
   };
 
@@ -252,6 +263,7 @@ export default function SignupPage() {
         {/* Social buttons */}
         <div className="flex gap-3">
           <button
+            onClick={() => showToast('Social login coming soon!')}
             className="flex-1 h-[50px] rounded-[14px] flex items-center justify-center gap-2.5 text-sm font-medium text-warm transition-colors active:scale-[0.97]"
             style={{
               fontFamily: 'var(--font-body)',
@@ -263,6 +275,7 @@ export default function SignupPage() {
             Google
           </button>
           <button
+            onClick={() => showToast('Social login coming soon!')}
             className="flex-1 h-[50px] rounded-[14px] flex items-center justify-center gap-2.5 text-sm font-medium text-warm transition-colors active:scale-[0.97]"
             style={{
               fontFamily: 'var(--font-body)',

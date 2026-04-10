@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useToast } from "@/components/ui/Toast";
 
 const filters = [
   { label: "All", emoji: "" },
@@ -66,6 +67,14 @@ const rooms = [
 
 export default function RoomsPage() {
   const [activeFilter, setActiveFilter] = useState("All");
+  const { showToast } = useToast();
+
+  const filteredRooms = useMemo(() => {
+    if (activeFilter === "All") return rooms;
+    return rooms.filter((room) =>
+      room.tags.some((tag) => tag.toLowerCase().includes(activeFilter.toLowerCase()))
+    );
+  }, [activeFilter]);
 
   return (
     <div
@@ -96,7 +105,7 @@ export default function RoomsPage() {
             </p>
           </div>
           <button
-            onClick={() => alert("Create room coming soon!")}
+            onClick={() => showToast("Create Room coming soon!")}
             className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold"
             style={{
               background: "linear-gradient(135deg, #FF5020, #FF7040)",
@@ -142,7 +151,7 @@ export default function RoomsPage() {
 
       {/* Room cards */}
       <div className="px-5 flex flex-col gap-4 mt-1">
-        {rooms.map((room) => (
+        {filteredRooms.map((room) => (
           <div
             key={room.id}
             className="rounded-2xl p-5 relative overflow-hidden"
@@ -244,7 +253,7 @@ export default function RoomsPage() {
               </div>
 
               <button
-                onClick={() => alert("Joining room...")}
+                onClick={() => showToast("Joining room... Coming soon!")}
                 className="px-5 py-2 rounded-full text-sm font-bold transition-all duration-200 active:scale-95"
                 style={{
                   background: "rgba(255,255,255,0.15)",
@@ -288,7 +297,7 @@ export default function RoomsPage() {
             Create a space for your vibe
           </p>
           <button
-            onClick={() => alert("Create room coming soon!")}
+            onClick={() => showToast("Create Room coming soon!")}
             className="px-8 py-3 rounded-full text-sm font-bold transition-all duration-200 active:scale-95"
             style={{
               background: "linear-gradient(135deg, #FF5020, #FF3070)",

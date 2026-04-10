@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const tabs = [
   { emoji: "🏠", label: "Home", href: "/home" },
-  { emoji: "🔍", label: "Discover", href: "/discover", hasNotification: true },
+  { emoji: "🔍", label: "Discover", href: "/discover" },
   { emoji: "🎙", label: "Rooms", href: "/rooms" },
   { emoji: "🤫", label: "Confess", href: "/confess" },
   { emoji: "👤", label: "Me", href: "/profile" },
@@ -39,7 +39,7 @@ export default function BottomNav() {
             >
               <span className="text-xl leading-none relative">
                 {tab.emoji}
-                {tab.hasNotification && (
+                {"hasNotification" in tab && (tab as any).hasNotification && (
                   <span
                     className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full"
                     style={{ background: "#FF3B30" }}

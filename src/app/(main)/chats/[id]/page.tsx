@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/ui/Toast";
 
 interface Message {
   id: string;
@@ -19,6 +20,7 @@ interface OtherProfile {
   id: string;
   display_name: string;
   avatar_emoji: string;
+  is_online?: boolean;
 }
 
 function formatMessageTime(dateStr: string): string {
@@ -60,6 +62,7 @@ export default function ChatPage() {
   const router = useRouter();
   const matchId = params.id as string;
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherProfile, setOtherProfile] = useState<OtherProfile | null>(null);
@@ -96,7 +99,7 @@ export default function ChatPage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, display_name, avatar_emoji")
+        .select("id, display_name, avatar_emoji, is_online")
         .eq("id", otherId)
         .single();
 
@@ -272,10 +275,12 @@ export default function ChatPage() {
             >
               {otherProfile?.avatar_emoji || "\uD83D\uDE0A"}
             </div>
-            <div
-              className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full"
-              style={{ border: "2px solid #0D0509" }}
-            />
+            {otherProfile?.is_online && (
+              <div
+                className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full"
+                style={{ border: "2px solid #0D0509" }}
+              />
+            )}
           </div>
           <div className="min-w-0">
             <h2
@@ -288,12 +293,13 @@ export default function ChatPage() {
               className="text-[11px]"
               style={{ color: "rgba(255,243,236,0.35)" }}
             >
-              Online
+              {otherProfile?.is_online ? "Online" : "Last seen recently"}
             </p>
           </div>
         </div>
 
         <button
+          onClick={() => showToast("Video calls coming soon!")}
           className="w-9 h-9 rounded-full flex items-center justify-center"
           style={{ background: "rgba(255,243,236,0.06)" }}
         >
