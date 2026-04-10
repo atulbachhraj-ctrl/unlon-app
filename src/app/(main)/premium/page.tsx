@@ -30,6 +30,25 @@ export default function PremiumPage() {
           "radial-gradient(ellipse 80% 50% at 50% 20%, rgba(255,80,32,0.18), transparent 70%), radial-gradient(ellipse 60% 40% at 30% 80%, rgba(255,48,112,0.1), transparent 60%), #0D0509",
       }}
     >
+      {/* Sparkle particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {[...Array(8)].map((_, i) => (
+          <span
+            key={i}
+            className="absolute text-sm"
+            style={{
+              left: `${10 + (i * 12) % 80}%`,
+              top: `${15 + (i * 17) % 60}%`,
+              animation: `sparkle-drift ${3 + (i % 3)}s ease-in-out infinite`,
+              animationDelay: `${i * 0.5}s`,
+              opacity: 0,
+            }}
+          >
+            {["✨", "⭐", "💫", "🌟"][i % 4]}
+          </span>
+        ))}
+      </div>
+
       <div className="relative z-10 flex flex-col items-center px-5 pt-16">
         {/* Crown emoji */}
         <div className="text-6xl mb-4" style={{ animation: "float 3s ease-in-out infinite" }}>
@@ -69,7 +88,7 @@ export default function PremiumPage() {
               <button
                 key={plan.id}
                 onClick={() => setSelectedPlan(plan.id)}
-                className="relative flex flex-col items-center py-4 px-2 rounded-2xl transition-all"
+                className={`relative flex flex-col items-center py-4 px-2 rounded-2xl transition-all ${isSelected ? "plan-selected-glow" : ""}`}
                 style={{
                   background: isSelected
                     ? "rgba(255,80,32,0.12)"

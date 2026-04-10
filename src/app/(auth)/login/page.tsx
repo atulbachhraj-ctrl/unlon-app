@@ -2,15 +2,45 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSignIn = async () => {
+    setError('');
+    setIsLoading(true);
+
+    if (!email || !password) {
+      setError('Email and password are required.');
+      setIsLoading(false);
+      return;
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    setIsLoading(false);
+
+    if (signInError) {
+      setError(signInError.message);
+      return;
+    }
+
+    router.push('/home');
+  };
 
   return (
     <div
-      className="min-h-dvh flex flex-col px-6 py-12"
+      className="min-h-dvh flex flex-col items-center justify-center px-6 py-12"
       style={{
         background: 'linear-gradient(160deg, #050D1A, #1A0508, #050D1A)',
       }}
@@ -40,6 +70,21 @@ export default function LoginPage() {
           Sign in to continue vibing
         </p>
 
+        {/* Error message */}
+        {error && (
+          <div
+            className="mb-4 px-4 py-3 rounded-[14px] text-sm"
+            style={{
+              background: 'rgba(244,63,94,0.1)',
+              border: '1px solid rgba(244,63,94,0.3)',
+              color: '#fb7185',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {error}
+          </div>
+        )}
+
         {/* Form */}
         <div className="flex flex-col gap-4">
           {/* Email */}
@@ -55,14 +100,12 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="h-[50px] rounded-[14px] px-4 text-sm text-warm outline-none transition-colors"
+              className="h-[50px] rounded-[14px] px-4 text-sm text-warm outline-none transition-all input-focus-ring"
               style={{
                 fontFamily: 'var(--font-body)',
                 background: 'rgba(255,243,236,0.05)',
                 border: '1px solid rgba(255,120,70,0.1)',
               }}
-              onFocus={(e) => (e.target.style.borderColor = 'rgba(255,120,70,0.4)')}
-              onBlur={(e) => (e.target.style.borderColor = 'rgba(255,120,70,0.1)')}
             />
           </div>
 
@@ -80,14 +123,12 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
-                className="w-full h-[50px] rounded-[14px] px-4 pr-12 text-sm text-warm outline-none transition-colors"
+                className="w-full h-[50px] rounded-[14px] px-4 pr-12 text-sm text-warm outline-none transition-all input-focus-ring"
                 style={{
                   fontFamily: 'var(--font-body)',
                   background: 'rgba(255,243,236,0.05)',
                   border: '1px solid rgba(255,120,70,0.1)',
                 }}
-                onFocus={(e) => (e.target.style.borderColor = 'rgba(255,120,70,0.4)')}
-                onBlur={(e) => (e.target.style.borderColor = 'rgba(255,120,70,0.1)')}
               />
               <button
                 type="button"
@@ -112,13 +153,15 @@ export default function LoginPage() {
 
           {/* Sign In button */}
           <button
-            className="w-full h-[52px] rounded-[50px] text-base font-bold text-white gradient-bg transition-transform active:scale-[0.97] mt-2"
+            onClick={handleSignIn}
+            disabled={isLoading}
+            className="w-full h-[52px] rounded-[50px] text-base font-bold text-white gradient-bg transition-transform active:scale-[0.97] mt-2 disabled:opacity-60 disabled:active:scale-100"
             style={{
               fontFamily: 'var(--font-heading)',
               boxShadow: '0 8px 32px rgba(255,80,32,0.25)',
             }}
           >
-            Sign In
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </div>
 

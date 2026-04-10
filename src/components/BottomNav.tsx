@@ -25,7 +25,7 @@ export default function BottomNav() {
       }}
     >
       <div
-        className="flex items-center justify-around w-full max-w-md mx-auto"
+        className="flex items-center justify-around w-full max-w-[430px] mx-auto"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         {tabs.map((tab) => {

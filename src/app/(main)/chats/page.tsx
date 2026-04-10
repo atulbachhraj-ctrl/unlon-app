@@ -119,7 +119,7 @@ export default function ChatsPage() {
           <Link
             key={chat.id}
             href={`/chats/${chat.id}`}
-            className="flex items-center gap-3 p-3 rounded-2xl active:bg-card transition-colors"
+            className="flex items-center gap-3 p-3 rounded-2xl active:bg-card transition-colors hover-glow"
           >
             {/* Avatar with online dot */}
             <div className="relative flex-shrink-0">
@@ -129,7 +129,7 @@ export default function ChatsPage() {
                 {chat.emoji}
               </div>
               {chat.online && (
-                <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-screen" />
+                <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-screen animate-online-pulse" />
               )}
             </div>
 
@@ -150,7 +150,10 @@ export default function ChatsPage() {
 
             {/* Unread badge */}
             {chat.unread > 0 && (
-              <div className="w-5 h-5 rounded-full gradient-bg flex items-center justify-center flex-shrink-0">
+              <div
+                className="min-w-[22px] h-[22px] px-1.5 rounded-full gradient-bg flex items-center justify-center flex-shrink-0"
+                style={{ boxShadow: "0 0 8px rgba(255,80,32,0.4)" }}
+              >
                 <span className="text-[11px] font-bold" style={{ color: "#060104" }}>
                   {chat.unread}
                 </span>

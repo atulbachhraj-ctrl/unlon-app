@@ -2,11 +2,13 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 export default function VerifyPage() {
   const router = useRouter();
   const [otp, setOtp] = useState(['', '', '', '']);
   const [timer, setTimer] = useState(30);
+  const [checking, setChecking] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -35,8 +37,14 @@ export default function VerifyPage() {
     }
   };
 
-  const handleVerify = () => {
-    router.push('/home');
+  const handleContinue = async () => {
+    setChecking(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    setChecking(false);
+
+    if (session) {
+      router.push('/home');
+    }
   };
 
   const handleResend = () => {
@@ -74,7 +82,7 @@ export default function VerifyPage() {
             border: '1px solid rgba(255,120,70,0.15)',
           }}
         >
-          📱
+          ✉️
         </div>
 
         {/* Heading */}
@@ -82,17 +90,17 @@ export default function VerifyPage() {
           className="text-[26px] font-bold text-warm mb-2 text-center"
           style={{ fontFamily: 'var(--font-heading)' }}
         >
-          Verify your number
+          Check your email
         </h1>
         <p
           className="text-sm text-center mb-10"
           style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,243,236,0.4)' }}
         >
-          We sent a code to{' '}
-          <span style={{ color: 'rgba(255,243,236,0.7)' }}>+91 98XXX XXXXX</span>
+          We sent a verification link to your email.{' '}
+          <span style={{ color: 'rgba(255,243,236,0.7)' }}>Click it to confirm your account.</span>
         </p>
 
-        {/* OTP inputs */}
+        {/* OTP inputs (visual design, can be functional later) */}
         <div className="flex gap-3 mb-8">
           {otp.map((digit, i) => (
             <input
@@ -128,17 +136,25 @@ export default function VerifyPage() {
           ))}
         </div>
 
-        {/* Verify button */}
+        {/* Continue to App button */}
         <button
-          onClick={handleVerify}
-          className="w-full h-[52px] rounded-[50px] text-base font-bold text-white gradient-bg transition-transform active:scale-[0.97]"
+          onClick={handleContinue}
+          disabled={checking}
+          className="w-full h-[52px] rounded-[50px] text-base font-bold text-white gradient-bg transition-transform active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100"
           style={{
             fontFamily: 'var(--font-heading)',
             boxShadow: '0 8px 32px rgba(255,80,32,0.25)',
           }}
         >
-          Verify
+          {checking ? 'Checking...' : 'Continue to App'}
         </button>
+
+        <p
+          className="text-xs text-center mt-4"
+          style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,243,236,0.3)' }}
+        >
+          Verified your email? Tap above to continue.
+        </p>
 
         {/* Resend */}
         <div className="mt-6 text-center">

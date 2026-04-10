@@ -10,15 +10,27 @@ const vibes = [
   { emoji: "📚", label: "Books" },
 ];
 
-const settingsItems = [
-  { emoji: "👑", label: "Unlon Premium", href: "/premium", color: "rgba(255,208,0,0.15)", iconColor: "#FFD000" },
-  { emoji: "✏️", label: "Edit Profile", href: "#", color: "rgba(255,112,64,0.15)", iconColor: "#FF7040" },
-  { emoji: "🔔", label: "Notifications", href: "#", color: "rgba(255,80,32,0.15)", iconColor: "#FF5020" },
-  { emoji: "🔒", label: "Privacy", href: "#", color: "rgba(139,92,246,0.15)", iconColor: "#8B5CF6" },
-  { emoji: "🌙", label: "Late Night Mode", href: "/night", color: "rgba(123,97,255,0.15)", iconColor: "#7B61FF" },
-  { emoji: "💬", label: "Messages", href: "/chats", color: "rgba(255,48,112,0.15)", iconColor: "#FF3070" },
-  { emoji: "❓", label: "Help & Support", href: "#", color: "rgba(255,160,64,0.15)", iconColor: "#FFA040" },
-  { emoji: "🚪", label: "Sign Out", href: "#", color: "rgba(255,48,112,0.1)", iconColor: "#FF3070", isSignOut: true },
+const settingsGroups = [
+  {
+    items: [
+      { emoji: "👑", label: "Unlon Premium", href: "/premium", color: "rgba(255,208,0,0.15)", iconColor: "#FFD000" },
+      { emoji: "✏️", label: "Edit Profile", href: "#", color: "rgba(255,112,64,0.15)", iconColor: "#FF7040" },
+    ],
+  },
+  {
+    items: [
+      { emoji: "🔔", label: "Notifications", href: "#", color: "rgba(255,80,32,0.15)", iconColor: "#FF5020" },
+      { emoji: "🔒", label: "Privacy", href: "#", color: "rgba(139,92,246,0.15)", iconColor: "#8B5CF6" },
+      { emoji: "🌙", label: "Late Night Mode", href: "/night", color: "rgba(123,97,255,0.15)", iconColor: "#7B61FF" },
+      { emoji: "💬", label: "Messages", href: "/chats", color: "rgba(255,48,112,0.15)", iconColor: "#FF3070" },
+    ],
+  },
+  {
+    items: [
+      { emoji: "❓", label: "Help & Support", href: "#", color: "rgba(255,160,64,0.15)", iconColor: "#FFA040" },
+      { emoji: "🚪", label: "Sign Out", href: "#", color: "rgba(255,48,112,0.1)", iconColor: "#FF3070", isSignOut: true },
+    ],
+  },
 ];
 
 export default function ProfilePage() {
@@ -112,42 +124,49 @@ export default function ProfilePage() {
         >
           Settings
         </h2>
-        <div className="flex flex-col gap-2">
-          {settingsItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-[rgba(255,120,70,0.08)] active:scale-[0.98] transition-transform"
-            >
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
-                style={{ background: item.color }}
-              >
-                {item.emoji}
-              </div>
-              <span
-                className={`flex-1 text-[15px] font-medium ${
-                  item.isSignOut ? "text-rose" : "text-warm"
-                }`}
-              >
-                {item.label}
-              </span>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                className="text-muted flex-shrink-0"
-              >
-                <path
-                  d="M7.5 5L12.5 10L7.5 15"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
+        <div className="flex flex-col gap-4">
+          {settingsGroups.map((group, gi) => (
+            <div key={gi} className="flex flex-col gap-1.5">
+              {group.items.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-[rgba(255,120,70,0.08)] active:scale-[0.98] transition-all hover-glow"
+                >
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
+                    style={{ background: item.color }}
+                  >
+                    {item.emoji}
+                  </div>
+                  <span
+                    className={`flex-1 text-[15px] font-medium ${
+                      item.isSignOut ? "text-rose" : "text-warm"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    className="text-muted flex-shrink-0"
+                  >
+                    <path
+                      d="M7.5 5L12.5 10L7.5 15"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </Link>
+              ))}
+              {gi < settingsGroups.length - 1 && (
+                <div className="h-px mx-3 mt-2" style={{ background: "rgba(255,120,70,0.08)" }} />
+              )}
+            </div>
           ))}
         </div>
       </div>

@@ -96,3 +96,77 @@ body {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* Card glow shadow for feed cards */
+.card-glow {
+  box-shadow:
+    0 2px 16px rgba(255,80,32,0.08),
+    0 0 1px rgba(255,112,64,0.2);
+}
+
+/* Subtle hover glow for interactive items */
+.hover-glow {
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-glow:hover {
+  background: rgba(255,243,236,0.04);
+  box-shadow: 0 0 0 1px rgba(255,112,64,0.08);
+}
+
+/* Online dot pulse */
+@keyframes online-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(52,211,153,0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(52,211,153,0);
+  }
+}
+.animate-online-pulse {
+  animation: online-pulse 2s ease-in-out infinite;
+}
+
+/* Sparkle float for premium */
+@keyframes sparkle-drift {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-60px) rotate(180deg); opacity: 0; }
+}
+
+/* Moon radial glow */
+.moon-glow {
+  background: radial-gradient(circle, rgba(123,97,255,0.25) 0%, rgba(123,97,255,0.08) 40%, transparent 70%);
+}
+
+/* Focus ring for inputs */
+.input-focus-ring:focus {
+  border-color: rgba(255,112,64,0.5) !important;
+  box-shadow: 0 0 0 3px rgba(255,80,32,0.15), 0 0 12px rgba(255,112,64,0.1);
+}
+
+/* Selected plan glow */
+.plan-selected-glow {
+  box-shadow:
+    0 0 0 1px #FF5020,
+    0 0 16px rgba(255,80,32,0.25),
+    0 0 32px rgba(255,80,32,0.1);
+}
+
+/* Purple hover tint for night owls */
+.night-owl-hover {
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.night-owl-hover:hover {
+  background: rgba(123,97,255,0.1) !important;
+  border-color: rgba(123,97,255,0.2) !important;
+}
+
+/* Discover action button hover */
+.action-btn-hover {
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.action-btn-hover:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 4px 16px rgba(255,80,32,0.2);
+}

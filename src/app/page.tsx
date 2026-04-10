@@ -1,18 +1,31 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
 
 const avatarEmojis = ['😎', '🥳', '🔥', '💜', '✨'];
 const avatarColors = ['#FF5020', '#FF3070', '#7B61FF', '#FFD000', '#FF7040'];
 
 export default function SplashPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/home');
+    }
+  }, [user, loading, router]);
+
   return (
     <div
-      className="relative min-h-dvh flex flex-col items-center justify-center overflow-hidden px-6"
+      className="fixed inset-0 flex items-center justify-center overflow-hidden"
       style={{
         background: 'linear-gradient(155deg, #1C0906, #2E0D00, #1C0816)',
       }}
     >
+    <div className="w-full max-w-[430px] flex flex-col items-center justify-center min-h-dvh px-6">
       {/* Radial glow overlay */}
       <div
         className="pointer-events-none absolute inset-0"
@@ -86,6 +99,7 @@ export default function SplashPage() {
           </Link>
         </div>
       </div>
+    </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -12,6 +13,8 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const inputStyle = {
     fontFamily: 'var(--font-body)',
@@ -19,21 +22,48 @@ export default function SignupPage() {
     border: '1px solid rgba(255,120,70,0.1)',
   };
 
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderColor = 'rgba(255,120,70,0.4)';
-  };
+  const handleCreateAccount = async () => {
+    setError('');
+    setIsLoading(true);
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderColor = 'rgba(255,120,70,0.1)';
-  };
+    if (!email || !password) {
+      setError('Email and password are required.');
+      setIsLoading(false);
+      return;
+    }
 
-  const handleCreateAccount = () => {
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      setIsLoading(false);
+      return;
+    }
+
+    const displayName = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+    const { error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          display_name: displayName || undefined,
+          phone: phone || undefined,
+        },
+      },
+    });
+
+    setIsLoading(false);
+
+    if (signUpError) {
+      setError(signUpError.message);
+      return;
+    }
+
     router.push('/verify');
   };
 
   return (
     <div
-      className="min-h-dvh flex flex-col px-6 py-10"
+      className="min-h-dvh flex flex-col items-center justify-center px-6 py-10"
       style={{
         background: 'linear-gradient(160deg, #1A0508, #0D0320, #1A0508)',
       }}
@@ -63,6 +93,21 @@ export default function SignupPage() {
           Join thousands already vibing on UNLON
         </p>
 
+        {/* Error message */}
+        {error && (
+          <div
+            className="mb-4 px-4 py-3 rounded-[14px] text-sm"
+            style={{
+              background: 'rgba(244,63,94,0.1)',
+              border: '1px solid rgba(244,63,94,0.3)',
+              color: '#fb7185',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {error}
+          </div>
+        )}
+
         {/* Form */}
         <div className="flex flex-col gap-4">
           {/* Name row */}
@@ -79,10 +124,8 @@ export default function SignupPage() {
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="First"
-                className="h-[50px] rounded-[14px] px-4 text-sm text-warm outline-none transition-colors"
+                className="h-[50px] rounded-[14px] px-4 text-sm text-warm outline-none transition-all input-focus-ring"
                 style={inputStyle}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
               />
             </div>
             <div className="flex-1 flex flex-col gap-1.5">
@@ -97,10 +140,8 @@ export default function SignupPage() {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Last"
-                className="h-[50px] rounded-[14px] px-4 text-sm text-warm outline-none transition-colors"
+                className="h-[50px] rounded-[14px] px-4 text-sm text-warm outline-none transition-all input-focus-ring"
                 style={inputStyle}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
               />
             </div>
           </div>
@@ -120,8 +161,6 @@ export default function SignupPage() {
               placeholder="you@example.com"
               className="h-[50px] rounded-[14px] px-4 text-sm text-warm outline-none transition-colors"
               style={inputStyle}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
             />
           </div>
 
@@ -149,10 +188,8 @@ export default function SignupPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="98765 43210"
-                className="flex-1 h-[50px] rounded-[14px] px-4 text-sm text-warm outline-none transition-colors"
+                className="flex-1 h-[50px] rounded-[14px] px-4 text-sm text-warm outline-none transition-all input-focus-ring"
                 style={inputStyle}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
               />
             </div>
           </div>
@@ -171,10 +208,8 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Create a strong password"
-                className="w-full h-[50px] rounded-[14px] px-4 pr-12 text-sm text-warm outline-none transition-colors"
+                className="w-full h-[50px] rounded-[14px] px-4 pr-12 text-sm text-warm outline-none transition-all input-focus-ring"
                 style={inputStyle}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
               />
               <button
                 type="button"
@@ -190,13 +225,14 @@ export default function SignupPage() {
           {/* Create Account button */}
           <button
             onClick={handleCreateAccount}
-            className="w-full h-[52px] rounded-[50px] text-base font-bold text-white gradient-bg transition-transform active:scale-[0.97] mt-2"
+            disabled={isLoading}
+            className="w-full h-[52px] rounded-[50px] text-base font-bold text-white gradient-bg transition-transform active:scale-[0.97] mt-2 disabled:opacity-60 disabled:active:scale-100"
             style={{
               fontFamily: 'var(--font-heading)',
               boxShadow: '0 8px 32px rgba(255,80,32,0.25)',
             }}
           >
-            Create Account
+            {isLoading ? 'Creating...' : 'Create Account'}
           </button>
         </div>
 

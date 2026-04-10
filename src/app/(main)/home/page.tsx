@@ -63,7 +63,7 @@ export default function HomePage() {
   const [activeVibe, setActiveVibe] = useState(0);
 
   return (
-    <div className="min-h-screen bg-bg pb-24">
+    <div className="min-h-screen bg-bg pb-28">
       {/* Ambient glow */}
       <div className="ambient-glow" />
 
@@ -180,7 +180,7 @@ export default function HomePage() {
           {feedCards.map((card) => (
             <div
               key={card.name}
-              className="rounded-2xl p-4 bg-card border border-[rgba(255,120,70,0.1)]"
+              className="rounded-2xl p-4 bg-card border border-[rgba(255,120,70,0.1)] card-glow"
             >
               {/* Card Header */}
               <div className="flex items-center gap-3 mb-3">

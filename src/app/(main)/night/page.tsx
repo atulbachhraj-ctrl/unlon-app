@@ -50,8 +50,9 @@ export default function NightPage() {
         <div className="px-5 pt-14 pb-2 text-center">
           {/* Moon with glow */}
           <div className="relative inline-block mb-4">
+            <div className="absolute inset-0 -m-8 moon-glow rounded-full" />
             <div
-              className="text-6xl"
+              className="relative text-6xl"
               style={{
                 filter: "drop-shadow(0 0 24px rgba(123,97,255,0.4))",
               }}
@@ -129,7 +130,7 @@ export default function NightPage() {
             {nightOwls.map((owl, i) => (
               <div
                 key={i}
-                className="flex items-center gap-3 p-4"
+                className="flex items-center gap-3 p-4 night-owl-hover cursor-pointer"
                 style={{
                   background: "rgba(123,97,255,0.05)",
                   border: "1px solid rgba(123,97,255,0.1)",

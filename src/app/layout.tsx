@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
   title: "UNLON — Solo No More",
@@ -25,7 +26,9 @@ export default function RootLayout({
       <body className="antialiased">
         <div className="ambient-glow" />
         <div className="relative z-10">
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </div>
       </body>
     </html>

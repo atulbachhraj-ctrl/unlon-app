@@ -161,6 +161,7 @@ export default function DiscoverPage() {
                   zIndex: 10 - pos,
                   opacity: pos > 2 ? 0 : 1,
                   transition: "transform 0.35s ease, opacity 0.35s ease",
+                  boxShadow: pos === 0 ? "0 8px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)" : "0 4px 20px rgba(0,0,0,0.3)",
                 }}
               >
                 {/* dark overlay for readability */}
@@ -268,7 +269,7 @@ export default function DiscoverPage() {
         {/* pass */}
         <button
           onClick={() => dismissCard("pass")}
-          className="flex items-center justify-center rounded-full active:scale-90 transition-transform"
+          className="flex items-center justify-center rounded-full active:scale-90 action-btn-hover"
           style={{
             width: 54,
             height: 54,
@@ -281,7 +282,7 @@ export default function DiscoverPage() {
         {/* connect */}
         <button
           onClick={() => dismissCard("connect")}
-          className="flex items-center justify-center rounded-full active:scale-90 transition-transform"
+          className="flex items-center justify-center rounded-full active:scale-90 action-btn-hover"
           style={{
             width: 70,
             height: 70,
@@ -295,7 +296,7 @@ export default function DiscoverPage() {
         {/* super like */}
         <button
           onClick={() => dismissCard("super")}
-          className="flex items-center justify-center rounded-full active:scale-90 transition-transform"
+          className="flex items-center justify-center rounded-full active:scale-90 action-btn-hover"
           style={{
             width: 54,
             height: 54,
@@ -307,7 +308,7 @@ export default function DiscoverPage() {
 
         {/* voice */}
         <button
-          className="flex items-center justify-center rounded-full active:scale-90 transition-transform"
+          className="flex items-center justify-center rounded-full active:scale-90 action-btn-hover"
           style={{
             width: 46,
             height: 46,
