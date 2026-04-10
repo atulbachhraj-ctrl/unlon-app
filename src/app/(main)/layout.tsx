@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from "@/components/BottomNav";
+import InstallPrompt from "@/components/InstallPrompt";
 import { useAuth } from '@/lib/auth-context';
 
 export default function MainLayout({
@@ -41,6 +42,7 @@ export default function MainLayout({
     <div className="flex flex-col items-center" style={{ minHeight: "100dvh" }}>
       <div className="w-full max-w-[430px] flex-1 relative">{children}</div>
       <BottomNav />
+      <InstallPrompt />
     </div>
   );
 }

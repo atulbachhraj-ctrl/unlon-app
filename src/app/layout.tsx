@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { ServiceWorkerRegister } from "@/lib/sw-register-client";
 
 export const metadata: Metadata = {
   title: "UNLON — Solo No More",
@@ -23,7 +24,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+      </head>
       <body className="antialiased">
+        <ServiceWorkerRegister />
         <div className="ambient-glow" />
         <div className="relative z-10">
           <AuthProvider>

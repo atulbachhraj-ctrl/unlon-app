@@ -1,11 +1,16 @@
 {
-  "name": "UNLON",
+  "name": "UNLON — Solo No More",
   "short_name": "UNLON",
-  "description": "Solo No More — Find your vibe, connect with real people",
-  "start_url": "/",
+  "description": "Find your vibe. Connect with real people. Never feel alone again.",
+  "start_url": "/home",
   "display": "standalone",
   "background_color": "#060104",
   "theme_color": "#FF5020",
+  "orientation": "portrait",
+  "scope": "/",
+  "id": "unlon-app",
+  "prefer_related_applications": false,
+  "categories": ["social", "lifestyle"],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -16,6 +21,13 @@
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
-  ]
+  ],
+  "screenshots": []
 }
