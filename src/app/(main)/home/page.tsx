@@ -1,23 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 
 const vibes = [
   { label: "All Vibes", emoji: "" },
-  { label: "Music", emoji: "🎵" },
-  { label: "Art", emoji: "📸" },
-  { label: "Travel", emoji: "🧳" },
-  { label: "Code", emoji: "💻" },
-  { label: "Books", emoji: "📚" },
-  { label: "Gaming", emoji: "🎮" },
+  { label: "Music", emoji: "\u{1F3B5}" },
+  { label: "Art", emoji: "\u{1F4F8}" },
+  { label: "Travel", emoji: "\u{1F9F3}" },
+  { label: "Code", emoji: "\u{1F4BB}" },
+  { label: "Books", emoji: "\u{1F4DA}" },
+  { label: "Gaming", emoji: "\u{1F3AE}" },
 ];
 
 const stories = [
-  { name: "Priya", emoji: "👩‍🦱" },
-  { name: "Aryan", emoji: "🧑" },
-  { name: "Sofia", emoji: "👩" },
-  { name: "Dev", emoji: "🧑‍💻" },
-  { name: "Maya", emoji: "👧" },
+  { name: "Priya", emoji: "\u{1F469}\u200D\u{1F9B1}" },
+  { name: "Aryan", emoji: "\u{1F9D1}" },
+  { name: "Sofia", emoji: "\u{1F469}" },
+  { name: "Dev", emoji: "\u{1F9D1}\u200D\u{1F4BB}" },
+  { name: "Maya", emoji: "\u{1F467}" },
 ];
 
 const feedCards = [
@@ -27,8 +29,8 @@ const feedCards = [
     location: "Mumbai",
     badge: "92% match",
     badgeType: "match" as const,
-    emoji: "👩‍🦱",
-    text: "Looking for someone to explore cafes in Mumbai this weekend 🌿",
+    emoji: "\u{1F469}\u200D\u{1F9B1}",
+    text: "Looking for someone to explore cafes in Mumbai this weekend \u{1F33F}",
   },
   {
     name: "Aryan",
@@ -36,8 +38,8 @@ const feedCards = [
     location: "Delhi",
     badge: "New",
     badgeType: "new" as const,
-    emoji: "🧑",
-    text: "Anyone into midnight drives and deep conversations? 🌃",
+    emoji: "\u{1F9D1}",
+    text: "Anyone into midnight drives and deep conversations? \u{1F303}",
   },
   {
     name: "Sofia",
@@ -45,8 +47,8 @@ const feedCards = [
     location: "Bangalore",
     badge: "88% match",
     badgeType: "match" as const,
-    emoji: "👩",
-    text: "Need a coding buddy for hackathons 💻",
+    emoji: "\u{1F469}",
+    text: "Need a coding buddy for hackathons \u{1F4BB}",
   },
   {
     name: "Dev",
@@ -54,13 +56,49 @@ const feedCards = [
     location: "Pune",
     badge: "95% match",
     badgeType: "match" as const,
-    emoji: "🧑‍💻",
-    text: "Let's jam together sometime — guitar, keys, anything goes 🎸",
+    emoji: "\u{1F9D1}\u200D\u{1F4BB}",
+    text: "Let's jam together sometime \u2014 guitar, keys, anything goes \u{1F3B8}",
   },
 ];
 
+const fallbackChallenge = "What's one thing that made you smile today?";
+
 export default function HomePage() {
   const [activeVibe, setActiveVibe] = useState(0);
+  const { profile } = useAuth();
+  const [dailyChallenge, setDailyChallenge] = useState(fallbackChallenge);
+
+  const displayName = profile?.display_name || "Alex";
+  const avatarEmoji = (profile as any)?.avatar_emoji || "\u{1F60A}";
+
+  useEffect(() => {
+    fetchDailyChallenge();
+  }, []);
+
+  async function fetchDailyChallenge() {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const { data, error } = await supabase
+        .from("daily_challenges")
+        .select("question")
+        .eq("active_date", today)
+        .single();
+
+      if (!error && data?.question) {
+        setDailyChallenge(data.question);
+      }
+    } catch {
+      // keep fallback
+    }
+  }
+
+  // Determine greeting based on time of day
+  function getGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  }
 
   return (
     <div className="min-h-screen bg-bg pb-28">
@@ -71,7 +109,7 @@ export default function HomePage() {
         {/* Top Bar */}
         <div className="flex items-start justify-between px-5 pt-14 pb-2">
           <div>
-            <p className="text-sm text-muted font-body">Good evening 👋</p>
+            <p className="text-sm text-muted font-body">{getGreeting()}, {displayName} 👋</p>
             <h1
               className="text-2xl font-extrabold text-warm mt-0.5"
               style={{ fontFamily: "var(--font-heading)" }}
@@ -81,7 +119,7 @@ export default function HomePage() {
           </div>
           <div className="relative mt-1">
             <div className="w-10 h-10 rounded-full gradient-bg flex items-center justify-center text-lg">
-              😊
+              {avatarEmoji}
             </div>
             <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-rose rounded-full border-2 border-bg" />
           </div>
@@ -152,7 +190,7 @@ export default function HomePage() {
               <span className="text-xs text-peach">Day 7 streak! 🔥</span>
             </div>
             <p className="text-warm text-[15px] font-medium mb-3">
-              What&apos;s one thing that made you smile today?
+              {dailyChallenge}
             </p>
             <button
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-bg"

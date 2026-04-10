@@ -1,39 +1,150 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 
-const vibes = [
-  { emoji: "🎵", label: "Music" },
-  { emoji: "📸", label: "Photography" },
-  { emoji: "✈️", label: "Travel" },
-  { emoji: "💻", label: "Coding" },
-  { emoji: "📚", label: "Books" },
+const defaultVibes = [
+  { emoji: "\u{1F3B5}", label: "Music" },
+  { emoji: "\u{1F4F8}", label: "Photography" },
+  { emoji: "\u2708\uFE0F", label: "Travel" },
+  { emoji: "\u{1F4BB}", label: "Coding" },
+  { emoji: "\u{1F4DA}", label: "Books" },
 ];
 
 const settingsGroups = [
   {
     items: [
-      { emoji: "👑", label: "Unlon Premium", href: "/premium", color: "rgba(255,208,0,0.15)", iconColor: "#FFD000" },
-      { emoji: "✏️", label: "Edit Profile", href: "#", color: "rgba(255,112,64,0.15)", iconColor: "#FF7040" },
+      { emoji: "\u{1F451}", label: "Unlon Premium", href: "/premium", color: "rgba(255,208,0,0.15)", iconColor: "#FFD000" },
+      { emoji: "\u270F\uFE0F", label: "Edit Profile", href: "#edit", color: "rgba(255,112,64,0.15)", iconColor: "#FF7040", isEdit: true },
     ],
   },
   {
     items: [
-      { emoji: "🔔", label: "Notifications", href: "#", color: "rgba(255,80,32,0.15)", iconColor: "#FF5020" },
-      { emoji: "🔒", label: "Privacy", href: "#", color: "rgba(139,92,246,0.15)", iconColor: "#8B5CF6" },
-      { emoji: "🌙", label: "Late Night Mode", href: "/night", color: "rgba(123,97,255,0.15)", iconColor: "#7B61FF" },
-      { emoji: "💬", label: "Messages", href: "/chats", color: "rgba(255,48,112,0.15)", iconColor: "#FF3070" },
+      { emoji: "\u{1F514}", label: "Notifications", href: "#", color: "rgba(255,80,32,0.15)", iconColor: "#FF5020" },
+      { emoji: "\u{1F512}", label: "Privacy", href: "#", color: "rgba(139,92,246,0.15)", iconColor: "#8B5CF6" },
+      { emoji: "\u{1F319}", label: "Late Night Mode", href: "/night", color: "rgba(123,97,255,0.15)", iconColor: "#7B61FF" },
+      { emoji: "\u{1F4AC}", label: "Messages", href: "/chats", color: "rgba(255,48,112,0.15)", iconColor: "#FF3070" },
     ],
   },
   {
     items: [
-      { emoji: "❓", label: "Help & Support", href: "#", color: "rgba(255,160,64,0.15)", iconColor: "#FFA040" },
-      { emoji: "🚪", label: "Sign Out", href: "#", color: "rgba(255,48,112,0.1)", iconColor: "#FF3070", isSignOut: true },
+      { emoji: "\u2753", label: "Help & Support", href: "#", color: "rgba(255,160,64,0.15)", iconColor: "#FFA040" },
+      { emoji: "\u{1F6AA}", label: "Sign Out", href: "#signout", color: "rgba(255,48,112,0.1)", iconColor: "#FF3070", isSignOut: true },
     ],
   },
 ];
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const { user, profile, signOut } = useAuth();
+
+  const [editMode, setEditMode] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editAvatar, setEditAvatar] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const [connectionsCount, setConnectionsCount] = useState(0);
+  const [confessionsCount, setConfessionsCount] = useState(0);
+
+  // Derive display values from profile or defaults
+  const displayName = profile?.display_name || "Alex";
+  const username = (profile as any)?.username || "alex_vibes";
+  const avatarEmoji = (profile as any)?.avatar_emoji || "\u{1F60A}";
+  const bio = (profile as any)?.bio || "Exploring the world one sunset at a time \u{1F305}";
+  const city = (profile as any)?.city || "";
+  const vibesData: string[] = (profile as any)?.vibes || [];
+
+  const vibes =
+    vibesData.length > 0
+      ? vibesData.map((v: string) => {
+          const match = defaultVibes.find((d) => d.label.toLowerCase() === v.toLowerCase());
+          return match || { emoji: "\u2728", label: v };
+        })
+      : defaultVibes;
+
+  useEffect(() => {
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
+
+  async function fetchStats() {
+    if (!user) return;
+    try {
+      // Count connections (matches)
+      const { count: matchCount } = await supabase
+        .from("matches")
+        .select("*", { count: "exact", head: true })
+        .or(`user_id.eq.${user.id},matched_user_id.eq.${user.id}`);
+      setConnectionsCount(matchCount || 0);
+    } catch {
+      // keep 0
+    }
+    try {
+      // Count confessions
+      const { count: confCount } = await supabase
+        .from("confessions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      setConfessionsCount(confCount || 0);
+    } catch {
+      // keep 0
+    }
+  }
+
+  function startEdit() {
+    setEditDisplayName(displayName);
+    setEditBio(bio);
+    setEditCity(city);
+    setEditAvatar(avatarEmoji);
+    setEditMode(true);
+  }
+
+  async function saveEdit() {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          display_name: editDisplayName,
+          bio: editBio,
+          city: editCity,
+          avatar_emoji: editAvatar,
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+      setEditMode(false);
+      // Reload page to pick up new profile in auth context
+      window.location.reload();
+    } catch (err: any) {
+      alert("Could not save: " + (err.message || "Unknown error"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSignOut() {
+    await signOut();
+    router.push("/");
+  }
+
+  function handleSettingClick(item: any, e: React.MouseEvent) {
+    if (item.isSignOut) {
+      e.preventDefault();
+      handleSignOut();
+    } else if (item.isEdit) {
+      e.preventDefault();
+      startEdit();
+    }
+  }
+
   return (
     <div className="min-h-screen bg-screen pb-24">
       {/* Cover area with gradient overlay */}
@@ -56,7 +167,7 @@ export default function ProfilePage() {
       <div className="relative z-10 flex flex-col items-center -mt-14">
         <div className="w-28 h-28 rounded-full p-[3px] bg-gradient-to-br from-sunset via-coral to-gold">
           <div className="w-full h-full rounded-full bg-screen flex items-center justify-center text-5xl">
-            😊
+            {avatarEmoji}
           </div>
         </div>
 
@@ -65,16 +176,16 @@ export default function ProfilePage() {
           className="text-2xl font-bold text-warm mt-3"
           style={{ fontFamily: "var(--font-heading)" }}
         >
-          Alex
+          {displayName}
         </h1>
-        <p className="text-sm text-muted mt-0.5">@alex_vibes</p>
+        <p className="text-sm text-muted mt-0.5">@{username}</p>
 
         {/* Stats row */}
         <div className="flex items-center gap-5 mt-4">
           {[
-            { value: "127", label: "connections" },
-            { value: "42", label: "vibes" },
-            { value: "15", label: "rooms" },
+            { value: String(connectionsCount), label: "connections" },
+            { value: String(confessionsCount), label: "confessions" },
+            { value: "0", label: "rooms" },
           ].map((stat, i) => (
             <div key={stat.label} className="flex items-center gap-1.5">
               {i > 0 && (
@@ -88,9 +199,79 @@ export default function ProfilePage() {
 
         {/* Bio */}
         <p className="text-sm text-warm2 mt-4 text-center px-8">
-          Exploring the world one sunset at a time 🌅
+          {bio}
         </p>
       </div>
+
+      {/* Inline Edit Mode */}
+      {editMode && (
+        <div className="mt-4 px-5">
+          <div
+            className="rounded-2xl p-4 flex flex-col gap-3"
+            style={{
+              background: "rgba(255,112,64,0.06)",
+              border: "1px solid rgba(255,112,64,0.15)",
+            }}
+          >
+            <h3 className="text-sm font-bold text-warm" style={{ fontFamily: "var(--font-heading)" }}>
+              Edit Profile
+            </h3>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs text-muted">Avatar Emoji</label>
+              <input
+                type="text"
+                value={editAvatar}
+                onChange={(e) => setEditAvatar(e.target.value)}
+                maxLength={4}
+                className="bg-[rgba(255,243,236,0.05)] border border-[rgba(255,120,70,0.12)] rounded-xl px-3 py-2 text-warm text-sm outline-none focus:border-[rgba(255,120,70,0.3)]"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs text-muted">Display Name</label>
+              <input
+                type="text"
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                className="bg-[rgba(255,243,236,0.05)] border border-[rgba(255,120,70,0.12)] rounded-xl px-3 py-2 text-warm text-sm outline-none focus:border-[rgba(255,120,70,0.3)]"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs text-muted">Bio</label>
+              <textarea
+                value={editBio}
+                onChange={(e) => setEditBio(e.target.value)}
+                rows={2}
+                className="bg-[rgba(255,243,236,0.05)] border border-[rgba(255,120,70,0.12)] rounded-xl px-3 py-2 text-warm text-sm outline-none focus:border-[rgba(255,120,70,0.3)] resize-none"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs text-muted">City</label>
+              <input
+                type="text"
+                value={editCity}
+                onChange={(e) => setEditCity(e.target.value)}
+                className="bg-[rgba(255,243,236,0.05)] border border-[rgba(255,120,70,0.12)] rounded-xl px-3 py-2 text-warm text-sm outline-none focus:border-[rgba(255,120,70,0.3)]"
+              />
+            </div>
+            <div className="flex gap-3 mt-1">
+              <button
+                onClick={saveEdit}
+                disabled={saving}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-bg disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, #FF5020, #FF3070)" }}
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => setEditMode(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium text-muted border border-[rgba(255,120,70,0.1)]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* My Vibes section */}
       <div className="mt-6 px-5">
@@ -101,7 +282,7 @@ export default function ProfilePage() {
           My Vibes
         </h2>
         <div className="flex flex-wrap gap-2">
-          {vibes.map((vibe) => (
+          {vibes.map((vibe: any) => (
             <span
               key={vibe.label}
               className="px-4 py-2 rounded-full text-sm font-medium text-warm"
@@ -131,6 +312,7 @@ export default function ProfilePage() {
                 <Link
                   key={item.label}
                   href={item.href}
+                  onClick={(e) => handleSettingClick(item, e)}
                   className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-[rgba(255,120,70,0.08)] active:scale-[0.98] transition-all hover-glow"
                 >
                   <div
@@ -141,7 +323,7 @@ export default function ProfilePage() {
                   </div>
                   <span
                     className={`flex-1 text-[15px] font-medium ${
-                      item.isSignOut ? "text-rose" : "text-warm"
+                      "isSignOut" in item && item.isSignOut ? "text-rose" : "text-warm"
                     }`}
                   >
                     {item.label}

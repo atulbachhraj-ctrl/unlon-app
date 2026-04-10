@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 
 /* ───── profile data ───── */
 interface Profile {
-  id: number;
+  id: string | number;
   name: string;
   age: number;
   city: string;
@@ -16,7 +18,16 @@ interface Profile {
   gradient: string;
 }
 
-const profiles: Profile[] = [
+/* ───── hardcoded fallbacks ───── */
+const GRADIENTS = [
+  "linear-gradient(145deg, #FF5020 0%, #FF3070 60%, #8B5CF6 100%)",
+  "linear-gradient(145deg, #7B61FF 0%, #FF3070 60%, #FF7040 100%)",
+  "linear-gradient(145deg, #FFD000 0%, #FF5020 50%, #FF3070 100%)",
+  "linear-gradient(145deg, #FF3070 0%, #8B5CF6 60%, #7B61FF 100%)",
+  "linear-gradient(145deg, #FFA040 0%, #FF5020 60%, #FF3070 100%)",
+];
+
+const fallbackProfiles: Profile[] = [
   {
     id: 1,
     name: "Priya",
@@ -58,32 +69,166 @@ const nearbyProfiles = [
   { id: 14, emoji: "🧔🏻", name: "Dev", gradient: "linear-gradient(135deg,#FFD000,#FF5020)" },
 ];
 
+/* ───── helper: map DB profile to card profile ───── */
+function dbToProfile(row: Record<string, unknown>, idx: number): Profile {
+  const vibes = Array.isArray(row.vibes) ? (row.vibes as string[]) : [];
+  return {
+    id: row.id as string,
+    name: (row.display_name as string) || (row.username as string) || "Someone",
+    age: (row.age as number) || 22,
+    city: (row.city as string) || "Nearby",
+    emoji: (row.avatar_emoji as string) || "🙂",
+    tags: vibes.length > 0 ? vibes.slice(0, 4) : ["Vibes"],
+    online: !!(row.is_online),
+    gradient: GRADIENTS[idx % GRADIENTS.length],
+  };
+}
+
 /* ───── component ───── */
 export default function DiscoverPage() {
+  const { user } = useAuth();
+
+  const [profiles, setProfiles] = useState<Profile[]>(fallbackProfiles);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [gone, setGone] = useState<Set<number>>(new Set());
   const [stamp, setStamp] = useState<"like" | "nope" | null>(null);
   const [matched, setMatched] = useState(false);
+  const [matchName, setMatchName] = useState("");
 
-  const visibleCards = profiles.filter((_, i) => !gone.has(i));
+  /* ── fetch real profiles on mount ── */
+  useEffect(() => {
+    if (!user) return;
+
+    async function loadProfiles() {
+      // 1) Get IDs the current user already swiped on
+      const { data: existingSwipes } = await supabase
+        .from("matches")
+        .select("user_b")
+        .eq("user_a", user!.id);
+
+      const swipedIds = (existingSwipes || []).map((s: { user_b: string }) => s.user_b);
+
+      // 2) Fetch profiles excluding self and already-swiped
+      let query = supabase
+        .from("profiles")
+        .select("*")
+        .neq("id", user!.id)
+        .limit(20);
+
+      if (swipedIds.length > 0) {
+        // Use .not('id', 'in', ...) to exclude already-swiped profiles
+        query = query.not("id", "in", `(${swipedIds.join(",")})`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching profiles:", error);
+        return; // keep fallback
+      }
+
+      if (data && data.length > 0) {
+        const mapped = data.map((row, idx) => dbToProfile(row, idx));
+        setProfiles(mapped);
+        // Reset card state for fresh deck
+        setCurrentIdx(0);
+        setGone(new Set());
+      }
+      // If no data, fallback profiles remain
+    }
+
+    loadProfiles();
+  }, [user]);
+
+  /* ── save swipe to DB ── */
+  const saveSwipe = useCallback(
+    async (targetProfile: Profile, action: "connect" | "super" | "pass") => {
+      if (!user) return;
+
+      const targetId = String(targetProfile.id);
+      const status = action === "pass" ? "rejected" : "pending";
+
+      // Insert the swipe
+      const { error: insertErr } = await supabase
+        .from("matches")
+        .insert({
+          user_a: user.id,
+          user_b: targetId,
+          status,
+        });
+
+      if (insertErr) {
+        console.error("Error saving swipe:", insertErr);
+        return;
+      }
+
+      // If it's a like/super, check if the other person already liked us back
+      if (status === "pending") {
+        const { data: mutual } = await supabase
+          .from("matches")
+          .select("id")
+          .eq("user_a", targetId)
+          .eq("user_b", user.id)
+          .eq("status", "pending")
+          .maybeSingle();
+
+        if (mutual) {
+          const now = new Date().toISOString();
+          // Update both records to 'matched'
+          await Promise.all([
+            supabase
+              .from("matches")
+              .update({ status: "matched", matched_at: now })
+              .eq("user_a", user.id)
+              .eq("user_b", targetId),
+            supabase
+              .from("matches")
+              .update({ status: "matched", matched_at: now })
+              .eq("user_a", targetId)
+              .eq("user_b", user.id),
+          ]);
+          return true; // mutual match!
+        }
+      }
+      return false;
+    },
+    [user],
+  );
 
   const dismissCard = useCallback(
     (action: "pass" | "connect" | "super") => {
       if (currentIdx >= profiles.length) return;
+      const targetProfile = profiles[currentIdx];
       setStamp(action === "pass" ? "nope" : "like");
+
+      // Save to DB (fire and forget, but handle match)
+      const swipePromise = saveSwipe(targetProfile, action);
 
       setTimeout(() => {
         setGone((prev) => new Set(prev).add(currentIdx));
         setStamp(null);
         setCurrentIdx((i) => i + 1);
-        if (action === "connect") {
-          setMatched(true);
-          setTimeout(() => setMatched(false), 1800);
+
+        if (action === "connect" || action === "super") {
+          swipePromise.then((isMutual) => {
+            if (isMutual) {
+              // Real mutual match
+              setMatchName(targetProfile.name);
+              setMatched(true);
+              setTimeout(() => setMatched(false), 2400);
+            } else if (!user) {
+              // Not logged in fallback: show match animation anyway
+              setMatched(true);
+              setTimeout(() => setMatched(false), 1800);
+            }
+          });
         }
       }, 300);
     },
-    [currentIdx],
+    [currentIdx, profiles, saveSwipe, user],
   );
+
+  const visibleCards = profiles.filter((_, i) => !gone.has(i));
 
   return (
     <div className="min-h-dvh pb-24" style={{ background: "#090412" }}>
@@ -102,7 +247,9 @@ export default function DiscoverPage() {
             >
               It&apos;s a Match!
             </p>
-            <p className="text-warm2 text-sm mt-1">Start a conversation now</p>
+            <p className="text-warm2 text-sm mt-1">
+              {matchName ? `You and ${matchName} liked each other!` : "Start a conversation now"}
+            </p>
           </div>
         </div>
       )}
