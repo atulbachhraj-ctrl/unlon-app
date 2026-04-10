@@ -40,10 +40,21 @@ export default function VerifyPage() {
   const handleContinue = async () => {
     setChecking(true);
     const { data: { session } } = await supabase.auth.getSession();
-    setChecking(false);
 
     if (session) {
-      router.push('/home');
+      // Check if user has completed profile setup (vibes set)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('vibes')
+        .eq('id', session.user.id)
+        .single();
+
+      setChecking(false);
+
+      const hasVibes = profile?.vibes && Array.isArray(profile.vibes) && profile.vibes.length > 0;
+      router.push(hasVibes ? '/home' : '/setup');
+    } else {
+      setChecking(false);
     }
   };
 

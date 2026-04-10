@@ -11,14 +11,19 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
+    } else if (!loading && user && profile) {
+      const vibes = (profile as any).vibes;
+      if (!vibes || (Array.isArray(vibes) && vibes.length === 0)) {
+        router.push('/setup');
+      }
     }
-  }, [user, loading, router]);
+  }, [user, profile, loading, router]);
 
   if (loading) {
     return (

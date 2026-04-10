@@ -48,6 +48,7 @@ export default function SignupPage() {
           display_name: displayName || undefined,
           phone: phone || undefined,
         },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
