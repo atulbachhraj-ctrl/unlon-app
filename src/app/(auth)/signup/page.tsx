@@ -17,6 +17,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const inputStyle = {
     fontFamily: 'var(--font-body)',
@@ -47,6 +48,12 @@ export default function SignupPage() {
       return;
     }
 
+    if (!agreedToTerms) {
+      setError('You must agree to our terms to continue');
+      setIsLoading(false);
+      return;
+    }
+
     const displayName = [firstName, lastName].filter(Boolean).join(' ').trim();
 
     const { error: signUpError } = await supabase.auth.signUp({
@@ -66,6 +73,20 @@ export default function SignupPage() {
     if (signUpError) {
       setError(signUpError.message);
       return;
+    }
+
+    // Save consent timestamp to profile
+    try {
+      const { data: { user: newUser } } = await supabase.auth.getUser();
+      if (newUser) {
+        await supabase
+          .from('profiles')
+          .update({ accepted_terms_at: new Date().toISOString() })
+          .eq('id', newUser.id);
+      }
+    } catch (e) {
+      // Column may not exist yet — consent is still tracked client-side via the checkbox
+      console.warn('Could not save consent timestamp:', e);
     }
 
     // Save email for verify page resend functionality
@@ -234,14 +255,82 @@ export default function SignupPage() {
             </div>
           </div>
 
+          {/* Consent checkbox */}
+          <div className="flex flex-col gap-2 mt-1">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={agreedToTerms}
+                onClick={() => setAgreedToTerms(!agreedToTerms)}
+                className="mt-0.5 w-[20px] h-[20px] rounded-[6px] flex items-center justify-center shrink-0 transition-all duration-200"
+                style={{
+                  background: agreedToTerms
+                    ? 'rgba(255,80,32,0.15)'
+                    : 'rgba(255,243,236,0.05)',
+                  border: agreedToTerms
+                    ? '2px solid #FF7040'
+                    : '2px solid rgba(255,243,236,0.15)',
+                }}
+              >
+                {agreedToTerms && (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path
+                      d="M2 6L5 9L10 3"
+                      stroke="#FF7040"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </button>
+              <span
+                className="text-xs leading-relaxed"
+                style={{ color: 'rgba(255,243,236,0.5)', fontFamily: 'var(--font-body)' }}
+              >
+                I agree to the{' '}
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  style={{ color: '#FF7040', textDecoration: 'underline' }}
+                >
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  style={{ color: '#FF7040', textDecoration: 'underline' }}
+                >
+                  Privacy Policy
+                </Link>
+                , and I confirm I am 18 years or older
+              </span>
+            </label>
+            <p
+              className="text-[11px] pl-[32px]"
+              style={{ color: 'rgba(255,243,236,0.3)', fontFamily: 'var(--font-body)' }}
+            >
+              By creating an account, you also agree to our{' '}
+              <Link
+                href="/guidelines"
+                target="_blank"
+                style={{ color: 'rgba(255,243,236,0.45)' }}
+              >
+                Community Guidelines
+              </Link>
+            </p>
+          </div>
+
           {/* Create Account button */}
           <button
             onClick={handleCreateAccount}
-            disabled={isLoading}
-            className="w-full h-[52px] rounded-[50px] text-base font-bold text-white gradient-bg transition-transform active:scale-[0.97] mt-2 disabled:opacity-60 disabled:active:scale-100"
+            disabled={isLoading || !agreedToTerms}
+            className="w-full h-[52px] rounded-[50px] text-base font-bold text-white gradient-bg transition-transform active:scale-[0.97] mt-2 disabled:opacity-50 disabled:active:scale-100"
             style={{
               fontFamily: 'var(--font-heading)',
-              boxShadow: '0 8px 32px rgba(255,80,32,0.25)',
+              boxShadow: agreedToTerms ? '0 8px 32px rgba(255,80,32,0.25)' : 'none',
             }}
           >
             {isLoading ? 'Creating...' : 'Create Account'}

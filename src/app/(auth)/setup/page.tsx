@@ -656,6 +656,18 @@ function Step4Done({
           {saving ? 'Setting up...' : 'Start Vibing'}
         </button>
       </div>
+
+      {/* Terms note */}
+      <p
+        className="text-center mt-6"
+        style={{
+          fontSize: '10px',
+          color: 'rgba(255,243,236,0.25)',
+          fontFamily: 'var(--font-body)',
+        }}
+      >
+        By using UNLON, you agree to our Terms of Service and Community Guidelines
+      </p>
     </div>
   );
 }
