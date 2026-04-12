@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/ui/Toast";
 import { supabase } from "@/lib/supabase";
+import { SkeletonAvatar, SkeletonCard, SkeletonText } from "@/components/Skeleton";
 
 const vibes = [
   { label: "All Vibes", emoji: "" },
@@ -93,6 +94,7 @@ export default function HomePage() {
   const [dailyChallenge, setDailyChallenge] = useState(fallbackChallenge);
   const [stories, setStories] = useState(fallbackStories);
   const [feedCards, setFeedCards] = useState<FeedCard[]>(fallbackFeedCards);
+  const [loadingFeed, setLoadingFeed] = useState(true);
 
   const displayName = profile?.display_name || "Alex";
   const avatarEmoji = (profile as any)?.avatar_emoji || "\u{1F60A}";
@@ -104,7 +106,9 @@ export default function HomePage() {
   useEffect(() => {
     if (user) {
       fetchStories();
-      fetchFeedCards();
+      fetchFeedCards().finally(() => setLoadingFeed(false));
+    } else {
+      setLoadingFeed(false);
     }
   }, [user]);
 
@@ -391,7 +395,27 @@ export default function HomePage() {
 
         {/* Feed Cards */}
         <div className="mt-3 px-5 flex flex-col gap-4">
-          {filteredFeedCards.map((card) => (
+          {loadingFeed ? (
+            <>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded-2xl p-4 bg-card border border-[rgba(255,120,70,0.1)]">
+                  <div className="flex items-center gap-3 mb-3">
+                    <SkeletonAvatar size={40} />
+                    <div className="flex-1 flex flex-col gap-2">
+                      <SkeletonText width="60%" height={14} />
+                      <SkeletonText width="40%" height={10} />
+                    </div>
+                  </div>
+                  <SkeletonText width="100%" height={12} className="mb-2" />
+                  <SkeletonText width="75%" height={12} className="mb-4" />
+                  <div className="flex gap-3">
+                    <SkeletonText width="50%" height={40} className="!rounded-xl" />
+                    <SkeletonText width="50%" height={40} className="!rounded-xl" />
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : filteredFeedCards.map((card) => (
             <div
               key={card.id}
               className="rounded-2xl p-4 bg-card border border-[rgba(255,120,70,0.1)] card-glow"
@@ -449,3 +473,4 @@ export default function HomePage() {
     </div>
   );
 }
+

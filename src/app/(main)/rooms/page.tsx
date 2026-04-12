@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useToast } from "@/components/ui/Toast";
+import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 
 const filters = [
   { label: "All", emoji: "" },
@@ -12,7 +14,19 @@ const filters = [
   { label: "Deep Talk", emoji: "\u{1F4AC}" },
 ];
 
-const rooms = [
+interface Room {
+  id: string | number;
+  name: string;
+  description: string;
+  gradient: string;
+  isLive: boolean;
+  listeners: number;
+  tags: string[];
+  avatars: string[];
+  fromDb?: boolean;
+}
+
+const hardcodedRooms: Room[] = [
   {
     id: 1,
     name: "\u{1F319} Late Night Deep Talk",
@@ -65,16 +79,165 @@ const rooms = [
   },
 ];
 
+const ROOM_GRADIENTS = [
+  "linear-gradient(135deg, #4C1D95 0%, #1E1040 50%, #0F0520 100%)",
+  "linear-gradient(135deg, #FF3070 0%, #FF5020 50%, #FF7040 100%)",
+  "linear-gradient(135deg, #FF5020 0%, #FFD000 100%)",
+  "linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)",
+  "linear-gradient(135deg, #10B981 0%, #14B8A6 50%, #0D9488 100%)",
+];
+
+const TAG_OPTIONS = [
+  "Late Night", "Music", "Study", "Comedy", "Deep Talk",
+  "Gaming", "Chill", "Advice", "Rant", "Fun",
+];
+
 export default function RoomsPage() {
   const [activeFilter, setActiveFilter] = useState("All");
   const { showToast } = useToast();
+  const { user } = useAuth();
+
+  const [rooms, setRooms] = useState<Room[]>(hardcodedRooms);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createDesc, setCreateDesc] = useState("");
+  const [createTags, setCreateTags] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [joiningId, setJoiningId] = useState<string | number | null>(null);
+
+  // Fetch rooms from DB on mount
+  useEffect(() => {
+    async function loadRooms() {
+      try {
+        const { data, error } = await supabase
+          .from("rooms")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          // Table may not exist - keep hardcoded
+          console.log("Rooms table not available, using hardcoded rooms");
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const dbRooms: Room[] = data.map((row: Record<string, unknown>, idx: number) => ({
+            id: row.id as string,
+            name: (row.name as string) || "Unnamed Room",
+            description: (row.description as string) || "",
+            gradient: ROOM_GRADIENTS[idx % ROOM_GRADIENTS.length],
+            isLive: !!(row.is_live),
+            listeners: (row.listener_count as number) || 0,
+            tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
+            avatars: ["\u{1F60A}", "\u{1F31F}"],
+            fromDb: true,
+          }));
+          setRooms([...dbRooms, ...hardcodedRooms]);
+        }
+      } catch {
+        // Keep hardcoded
+      }
+    }
+
+    loadRooms();
+  }, []);
+
+  const handleCreateRoom = useCallback(async () => {
+    if (!createName.trim()) {
+      showToast("Please enter a room name");
+      return;
+    }
+    if (!user) {
+      showToast("Sign in to create a room");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const { data, error } = await supabase
+        .from("rooms")
+        .insert({
+          name: createName.trim(),
+          description: createDesc.trim(),
+          tags: createTags,
+          created_by: user.id,
+          is_live: true,
+          listener_count: 1,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Create room error:", error);
+        showToast("Could not create room. Try again later.");
+        setCreating(false);
+        return;
+      }
+
+      // Add to local state
+      const newRoom: Room = {
+        id: (data as Record<string, unknown>).id as string,
+        name: createName.trim(),
+        description: createDesc.trim(),
+        gradient: ROOM_GRADIENTS[Math.floor(Math.random() * ROOM_GRADIENTS.length)],
+        isLive: true,
+        listeners: 1,
+        tags: createTags,
+        avatars: ["\u{1F60A}"],
+        fromDb: true,
+      };
+      setRooms((prev) => [newRoom, ...prev]);
+      setShowCreateModal(false);
+      setCreateName("");
+      setCreateDesc("");
+      setCreateTags([]);
+      showToast("Room created!");
+    } catch {
+      showToast("Could not create room. Try again later.");
+    }
+    setCreating(false);
+  }, [createName, createDesc, createTags, user, showToast]);
+
+  const handleJoinRoom = useCallback(async (roomId: string | number) => {
+    if (!user) {
+      showToast("Sign in to join rooms");
+      return;
+    }
+
+    setJoiningId(roomId);
+    try {
+      const { error } = await supabase
+        .from("room_participants")
+        .insert({
+          room_id: roomId,
+          user_id: user.id,
+        });
+
+      if (error) {
+        console.error("Join room error:", error);
+        showToast("Joining failed");
+        setJoiningId(null);
+        return;
+      }
+      showToast("Joined room!");
+    } catch {
+      showToast("Joining failed");
+    }
+    setJoiningId(null);
+  }, [user, showToast]);
+
+  const toggleTag = (tag: string) => {
+    setCreateTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
 
   const filteredRooms = useMemo(() => {
     if (activeFilter === "All") return rooms;
     return rooms.filter((room) =>
       room.tags.some((tag) => tag.toLowerCase().includes(activeFilter.toLowerCase()))
     );
-  }, [activeFilter]);
+  }, [activeFilter, rooms]);
 
   return (
     <div
@@ -105,7 +268,7 @@ export default function RoomsPage() {
             </p>
           </div>
           <button
-            onClick={() => showToast("Create Room coming soon!")}
+            onClick={() => setShowCreateModal(true)}
             className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold"
             style={{
               background: "linear-gradient(135deg, #FF5020, #FF7040)",
@@ -253,7 +416,8 @@ export default function RoomsPage() {
               </div>
 
               <button
-                onClick={() => showToast("Joining room... Coming soon!")}
+                onClick={() => handleJoinRoom(room.id)}
+                disabled={joiningId === room.id}
                 className="px-5 py-2 rounded-full text-sm font-bold transition-all duration-200 active:scale-95"
                 style={{
                   background: "rgba(255,255,255,0.15)",
@@ -262,9 +426,10 @@ export default function RoomsPage() {
                   WebkitBackdropFilter: "blur(12px)",
                   border: "1px solid rgba(255,255,255,0.2)",
                   boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+                  opacity: joiningId === room.id ? 0.6 : 1,
                 }}
               >
-                Join
+                {joiningId === room.id ? "Joining..." : "Join"}
               </button>
             </div>
           </div>
@@ -297,7 +462,7 @@ export default function RoomsPage() {
             Create a space for your vibe
           </p>
           <button
-            onClick={() => showToast("Create Room coming soon!")}
+            onClick={() => setShowCreateModal(true)}
             className="px-8 py-3 rounded-full text-sm font-bold transition-all duration-200 active:scale-95"
             style={{
               background: "linear-gradient(135deg, #FF5020, #FF3070)",
@@ -309,6 +474,120 @@ export default function RoomsPage() {
           </button>
         </div>
       </div>
+
+      {/* Create Room Modal */}
+      {showCreateModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-5"
+          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+        >
+          <div
+            className="w-full max-w-md rounded-[18px] p-6 relative"
+            style={{
+              background: "#130709",
+              border: "1px solid rgba(255,120,70,0.12)",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+            }}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setShowCreateModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: "rgba(255,243,236,0.08)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFF3EC" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h2
+              className="text-xl font-bold mb-5"
+              style={{ fontFamily: "'Syne', sans-serif", color: "#FFF3EC" }}
+            >
+              Create a Room
+            </h2>
+
+            {/* Room Name */}
+            <label className="block mb-1 text-[13px] font-medium" style={{ color: "rgba(255,243,236,0.6)" }}>
+              Room Name
+            </label>
+            <input
+              type="text"
+              value={createName}
+              onChange={(e) => setCreateName(e.target.value)}
+              placeholder="e.g. Late Night Chill"
+              maxLength={60}
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none mb-4"
+              style={{
+                background: "rgba(255,243,236,0.06)",
+                border: "1px solid rgba(255,243,236,0.08)",
+                color: "#FFF3EC",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            />
+
+            {/* Description */}
+            <label className="block mb-1 text-[13px] font-medium" style={{ color: "rgba(255,243,236,0.6)" }}>
+              Description
+            </label>
+            <textarea
+              value={createDesc}
+              onChange={(e) => setCreateDesc(e.target.value)}
+              placeholder="What's this room about?"
+              maxLength={160}
+              rows={2}
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none mb-4"
+              style={{
+                background: "rgba(255,243,236,0.06)",
+                border: "1px solid rgba(255,243,236,0.08)",
+                color: "#FFF3EC",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            />
+
+            {/* Tags */}
+            <label className="block mb-2 text-[13px] font-medium" style={{ color: "rgba(255,243,236,0.6)" }}>
+              Tags
+            </label>
+            <div className="flex flex-wrap gap-2 mb-6">
+              {TAG_OPTIONS.map((tag) => {
+                const selected = createTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className="px-3 py-1.5 rounded-full text-[12px] font-medium transition-all duration-150"
+                    style={{
+                      background: selected
+                        ? "linear-gradient(135deg, #FF5020, #FF3070)"
+                        : "rgba(255,243,236,0.06)",
+                      color: selected ? "#FFF3EC" : "rgba(255,243,236,0.5)",
+                      border: selected ? "none" : "1px solid rgba(255,243,236,0.08)",
+                    }}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Submit */}
+            <button
+              onClick={handleCreateRoom}
+              disabled={creating}
+              className="w-full py-3 rounded-full text-sm font-bold transition-all duration-200 active:scale-[0.98]"
+              style={{
+                background: "linear-gradient(135deg, #FF5020, #FF3070)",
+                color: "#FFF3EC",
+                boxShadow: "0 4px 24px rgba(255,80,32,0.4)",
+                opacity: creating ? 0.6 : 1,
+              }}
+            >
+              {creating ? "Creating..." : "Create Room"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

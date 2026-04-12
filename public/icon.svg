@@ -2,9 +2,16 @@
   <defs>
     <linearGradient id="sunsetGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#FF5020"/>
+      <stop offset="50%" stop-color="#FF3070"/>
       <stop offset="100%" stop-color="#FFD000"/>
     </linearGradient>
+    <clipPath id="roundedRect">
+      <rect width="512" height="512" rx="96" ry="96"/>
+    </clipPath>
   </defs>
-  <rect width="512" height="512" rx="80" ry="80" fill="#060104"/>
-  <text x="256" y="340" text-anchor="middle" font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="300" fill="url(#sunsetGrad)">U</text>
+  <g clip-path="url(#roundedRect)">
+    <rect width="512" height="512" fill="#060104"/>
+    <circle cx="256" cy="460" r="180" fill="rgba(255,80,32,0.06)"/>
+    <text x="256" y="350" text-anchor="middle" font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="320" fill="url(#sunsetGrad)">U</text>
+  </g>
 </svg>

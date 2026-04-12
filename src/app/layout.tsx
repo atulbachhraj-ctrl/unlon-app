@@ -8,6 +8,19 @@ export const metadata: Metadata = {
   title: "UNLON — Solo No More",
   description: "Find your vibe. Connect with real people. Never feel alone again.",
   manifest: "/manifest.json",
+  keywords: "social app, dating, confessions, night mode, india, gen z",
+  openGraph: {
+    title: "UNLON — Solo No More",
+    description: "Find your vibe. Connect with real people. Never feel alone again.",
+    type: "website",
+    url: "https://unlon-app.vercel.app",
+    images: [{ url: "https://unlon-app.vercel.app/icon.svg" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "UNLON — Solo No More",
+    description: "Find your vibe. Connect with real people. Never feel alone again.",
+  },
 };
 
 export const viewport: Viewport = {

@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
+import { SkeletonText } from "@/components/Skeleton";
+import ReportModal from "@/components/ReportModal";
 
 /* ───── profile data ───── */
 interface Profile {
@@ -98,6 +100,7 @@ export default function DiscoverPage() {
   const [matchName, setMatchName] = useState("");
   const [nearbyProfiles, setNearbyProfiles] = useState(fallbackNearby);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null);
 
   /* ── fetch real profiles on mount ── */
   useEffect(() => {
@@ -319,11 +322,18 @@ export default function DiscoverPage() {
       {/* ── swipe card stack ── */}
       <section className="px-5 relative" style={{ height: 370 }}>
         {loadingProfiles ? (
-          <div className="flex flex-col items-center justify-center h-full">
-            <div
-              className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-              style={{ borderColor: "rgba(255,80,32,0.4)", borderTopColor: "transparent" }}
-            />
+          <div className="absolute inset-x-5 rounded-3xl overflow-hidden" style={{ height: 340 }}>
+            <div className="h-full w-full flex flex-col items-center justify-center gap-4 px-6" style={{ background: "linear-gradient(145deg, #130709 0%, #1a0d0f 100%)" }}>
+              <div className="w-20 h-20 rounded-full" style={{ background: "linear-gradient(90deg, #130709 25%, #1a0d0f 37%, #130709 63%)", backgroundSize: "800px 100%", animation: "shimmer 1.6s ease-in-out infinite" }} />
+              <SkeletonText width="50%" height={20} />
+              <SkeletonText width="35%" height={12} />
+              <div className="flex gap-2 mt-2">
+                <SkeletonText width={60} height={24} className="!rounded-full" />
+                <SkeletonText width={60} height={24} className="!rounded-full" />
+                <SkeletonText width={60} height={24} className="!rounded-full" />
+              </div>
+            </div>
+            <style>{`@keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }`}</style>
           </div>
         ) : visibleCards.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -361,6 +371,21 @@ export default function DiscoverPage() {
                       "linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)",
                   }}
                 />
+
+                {/* Report flag button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setReportTarget({ id: String(p.id), name: p.name });
+                  }}
+                  className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(0,0,0,0.35)", backdropFilter: "blur(4px)" }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,243,236,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                    <line x1="4" y1="22" x2="4" y2="15" />
+                  </svg>
+                </button>
 
                 {/* stamps */}
                 {pos === 0 && stamp === "like" && (
@@ -543,6 +568,14 @@ export default function DiscoverPage() {
           ))}
         </div>
       </section>
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={!!reportTarget}
+        onClose={() => setReportTarget(null)}
+        targetUserId={reportTarget?.id || ""}
+        targetName={reportTarget?.name || ""}
+      />
     </div>
   );
 }

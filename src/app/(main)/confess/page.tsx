@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/ui/Toast";
+import { SkeletonAvatar, SkeletonText } from "@/components/Skeleton";
 
 // Seed/fallback confessions shown when DB is empty
 const seedConfessions = [
@@ -330,11 +331,31 @@ export default function ConfessPage() {
           </h2>
 
           {loadingFeed ? (
-            <div className="flex justify-center py-10">
-              <div
-                className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
-                style={{ borderColor: "rgba(255,48,112,0.4)", borderTopColor: "transparent" }}
-              />
+            <div className="flex flex-col gap-4">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="p-4"
+                  style={{
+                    background: "rgba(255,48,112,0.04)",
+                    border: "1px solid rgba(255,48,112,0.08)",
+                    borderRadius: "18px",
+                  }}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <SkeletonAvatar size={36} />
+                    <SkeletonText width="30%" height={14} />
+                  </div>
+                  <SkeletonText width="100%" height={12} className="mb-2" />
+                  <SkeletonText width="85%" height={12} className="mb-2" />
+                  <SkeletonText width="60%" height={12} className="mb-4" />
+                  <div className="flex gap-3">
+                    {[0, 1, 2, 3].map((j) => (
+                      <SkeletonText key={j} width={56} height={28} className="!rounded-full" />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="flex flex-col gap-4">

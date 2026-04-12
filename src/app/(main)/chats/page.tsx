@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
+import { SkeletonAvatar, SkeletonText } from "@/components/Skeleton";
 
 interface ChatItem {
   id: string;
@@ -307,14 +308,19 @@ export default function ChatsPage() {
 
       {/* Loading state */}
       {loading && (
-        <div className="flex items-center justify-center mt-20">
-          <div
-            className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-            style={{
-              borderColor: "rgba(255,120,70,0.3)",
-              borderTopColor: "transparent",
-            }}
-          />
+        <div className="mt-4 px-5 flex flex-col gap-1.5">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-3 p-3 rounded-2xl">
+              <SkeletonAvatar size={48} />
+              <div className="flex-1 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <SkeletonText width="40%" height={14} />
+                  <SkeletonText width={40} height={10} />
+                </div>
+                <SkeletonText width="70%" height={12} />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

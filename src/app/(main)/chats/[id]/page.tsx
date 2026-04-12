@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
+import ReportModal from "@/components/ReportModal";
 
 interface Message {
   id: string;
@@ -69,6 +70,8 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -317,6 +320,75 @@ export default function ChatPage() {
             <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
           </svg>
         </button>
+
+        {/* More menu */}
+        <div className="relative">
+          <button
+            onClick={() => setShowMenu((v) => !v)}
+            className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{ background: "rgba(255,243,236,0.06)" }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFF3EC">
+              <circle cx="12" cy="5" r="1.5" />
+              <circle cx="12" cy="12" r="1.5" />
+              <circle cx="12" cy="19" r="1.5" />
+            </svg>
+          </button>
+
+          {showMenu && (
+            <div
+              className="absolute top-11 right-0 rounded-xl py-1 min-w-[160px] z-30"
+              style={{
+                background: "#1A0A0F",
+                border: "1px solid rgba(255,120,70,0.12)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+              }}
+            >
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  setShowReport(true);
+                }}
+                className="w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-2"
+                style={{ color: "#FFF3EC" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                  <line x1="4" y1="22" x2="4" y2="15" />
+                </svg>
+                Report User
+              </button>
+              <button
+                onClick={async () => {
+                  setShowMenu(false);
+                  if (!user || !otherProfile) return;
+                  try {
+                    const { error } = await supabase.from("blocks").insert({
+                      blocker_id: user.id,
+                      blocked_user_id: otherProfile.id,
+                    });
+                    if (error) {
+                      showToast("Could not block user");
+                    } else {
+                      showToast(`${otherProfile.display_name} blocked`);
+                      router.push("/chats");
+                    }
+                  } catch {
+                    showToast("Could not block user");
+                  }
+                }}
+                className="w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-2"
+                style={{ color: "#EF4444" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                </svg>
+                Block User
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Messages area */}
@@ -496,6 +568,14 @@ export default function ChatPage() {
           </svg>
         </button>
       </div>
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={showReport}
+        onClose={() => setShowReport(false)}
+        targetUserId={otherProfile?.id || ""}
+        targetName={otherProfile?.display_name || "User"}
+      />
     </div>
   );
 }
