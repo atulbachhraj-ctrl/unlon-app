@@ -149,7 +149,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-screen pb-24">
+    <div className="min-h-screen bg-screen pb-28">
       {/* Cover area with gradient overlay */}
       <div
         className="relative h-40 w-full"

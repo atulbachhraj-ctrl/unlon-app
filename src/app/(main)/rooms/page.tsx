@@ -169,7 +169,7 @@ export default function RoomsPage() {
 
       if (error) {
         console.error("Create room error:", error);
-        showToast("Could not create room. Try again later.");
+        showToast("Could not create room");
         setCreating(false);
         return;
       }
@@ -215,7 +215,7 @@ export default function RoomsPage() {
 
       if (error) {
         console.error("Join room error:", error);
-        showToast("Joining failed");
+        showToast("Could not join room");
         setJoiningId(null);
         return;
       }

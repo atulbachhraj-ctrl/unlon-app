@@ -218,6 +218,7 @@ export default function ChatPage() {
       // Remove optimistic message on error
       setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
       console.error("Failed to send message:", error);
+      showToast("Message failed to send");
     } else if (data) {
       // Replace optimistic with real
       setMessages((prev) =>

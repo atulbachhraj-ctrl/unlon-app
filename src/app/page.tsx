@@ -97,6 +97,10 @@ export default function SplashPage() {
               Sign In
             </span>
           </Link>
+
+          <p style={{ color: 'rgba(255,243,236,0.2)', fontSize: '10px', marginTop: '20px' }}>
+            <Link href="/terms" style={{ color: 'rgba(255,243,236,0.2)' }}>Terms</Link> · <Link href="/privacy" style={{ color: 'rgba(255,243,236,0.2)' }}>Privacy</Link> · <Link href="/guidelines" style={{ color: 'rgba(255,243,236,0.2)' }}>Guidelines</Link>
+          </p>
         </div>
       </div>
     </div>

@@ -191,7 +191,7 @@ export default function NightPage() {
 
   return (
     <div
-      className="min-h-screen pb-24 relative overflow-y-auto"
+      className="min-h-screen pb-28 relative overflow-y-auto"
       style={{
         background: "linear-gradient(155deg, #0A0520, #15081A, #0A0516)",
       }}

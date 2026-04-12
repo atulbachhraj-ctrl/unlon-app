@@ -196,6 +196,7 @@ export default function DiscoverPage() {
 
       if (insertErr) {
         console.error("Error saving swipe:", insertErr);
+        showToast("Something went wrong");
         return;
       }
 
@@ -268,7 +269,7 @@ export default function DiscoverPage() {
   const visibleCards = profiles.filter((_, i) => !gone.has(i));
 
   return (
-    <div className="min-h-dvh pb-24" style={{ background: "#090412" }}>
+    <div className="min-h-dvh pb-28" style={{ background: "#090412" }}>
       {/* ── match flash ── */}
       {matched && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">

@@ -265,7 +265,7 @@ export default function ChatsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-screen pb-24">
+    <div className="min-h-screen bg-screen pb-28">
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-14 pb-2">
         <h1

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/components/ui/Toast';
 
 const AVATARS = ['😊', '😎', '🤗', '😄', '🥰', '😇', '🤓', '😏', '🙃', '😌', '🤩', '😋'];
 
@@ -33,6 +34,7 @@ const CITIES = ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Chennai', 'Hyderabad', 
 export default function SetupPage() {
   const router = useRouter();
   const { user, profile } = useAuth();
+  const { showToast } = useToast();
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
 
@@ -88,6 +90,7 @@ export default function SetupPage() {
 
     if (error) {
       console.error('Error saving profile:', error);
+      showToast("Could not save profile. Try again.");
       return;
     }
 

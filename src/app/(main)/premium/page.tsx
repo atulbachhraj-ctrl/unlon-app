@@ -26,7 +26,7 @@ export default function PremiumPage() {
 
   return (
     <div
-      className="min-h-screen pb-24 relative"
+      className="min-h-screen pb-28 relative"
       style={{
         background:
           "radial-gradient(ellipse 80% 50% at 50% 20%, rgba(255,80,32,0.18), transparent 70%), radial-gradient(ellipse 60% 40% at 30% 80%, rgba(255,48,112,0.1), transparent 60%), #0D0509",

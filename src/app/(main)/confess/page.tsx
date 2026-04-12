@@ -202,6 +202,7 @@ export default function ConfessPage() {
 
     if (error) {
       console.error("Error updating reaction:", error);
+      showToast("Could not react. Try again.");
       // Revert optimistic update
       setConfessions((prev) =>
         prev.map((c) =>
@@ -215,7 +216,7 @@ export default function ConfessPage() {
 
   return (
     <div
-      className="min-h-screen pb-24 relative overflow-y-auto"
+      className="min-h-screen pb-28 relative overflow-y-auto"
       style={{ background: "#050810" }}
     >
       {/* Ambient glow */}

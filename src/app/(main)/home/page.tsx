@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/ui/Toast";
 import { supabase } from "@/lib/supabase";
@@ -296,12 +297,12 @@ export default function HomePage() {
               Find your vibe
             </h1>
           </div>
-          <div className="relative mt-1">
+          <Link href="/profile" className="relative mt-1">
             <div className="w-10 h-10 rounded-full gradient-bg flex items-center justify-center text-lg">
               {avatarEmoji}
             </div>
             <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-rose rounded-full border-2 border-bg" />
-          </div>
+          </Link>
         </div>
 
         {/* Vibe Filter Pills */}
@@ -380,6 +381,17 @@ export default function HomePage() {
             >
               Share Answer
             </button>
+          </div>
+        </div>
+
+        {/* Late Night Mode Banner */}
+        <div onClick={() => router.push('/night')} className="mx-4 mb-3 mt-4 p-3 rounded-2xl cursor-pointer" style={{ background: 'linear-gradient(135deg, rgba(123,97,255,0.1), rgba(45,27,105,0.15))', border: '1px solid rgba(123,97,255,0.2)' }}>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🌙</span>
+            <div>
+              <p className="text-sm font-bold" style={{ color: '#7B61FF' }}>Late Night Mode</p>
+              <p className="text-xs" style={{ color: 'rgba(255,243,236,0.35)' }}>Who's awake right now?</p>
+            </div>
           </div>
         </div>
 
